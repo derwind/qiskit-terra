@@ -52,8 +52,8 @@ class Checker:
         if m := re.search(r"'(\S+)'", str(class_type)):
             full_class_name = m.group(1)
         if isclass_in_file(full_class_name, module_name):
-            sig = inspect.signature(class_type)
-            print(class_type, '->', sig)
+            # sig = inspect.signature(class_type)
+            # print(class_type, '->', sig)
             for y in inspect.getmembers(class_type):
                 if not isinstance(y, tuple):
                     continue
@@ -67,7 +67,13 @@ class Checker:
                      method_type):
         full_method_name = str(method_type).split(' ')[1]
         if directly_belongs_to(full_method_name, class_name):
-            print(full_method_name)
+            sig = inspect.signature(method_type)
+            print(full_method_name, '=>', sig)
+
+            #docstring = parse(inspect.getdoc(method_type))
+            #arg_types = {arg.arg_name: int for arg in docstring.params}
+            print('[DOCSTRING]', inspect.getdoc(method_type))
+            print()
 
 
 def autohints(target_dir):
