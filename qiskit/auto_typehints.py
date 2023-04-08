@@ -9,6 +9,7 @@ import glob
 import importlib
 import inspect
 import docstring_parser
+from typing import Dict
 
 
 if sys.version_info.major < 3 or sys.version_info.minor < 10:
@@ -55,6 +56,7 @@ class Checker:
             # print('[DOCSTRING]', inspect.getdoc(method_type))
             docstring = docstring_parser.google.parse(inspect.getdoc(method_type))
             arg_types = {arg.arg_name: arg.type_name for arg in docstring.params}
+            arg_types = self.improve_type_infos(arg_types)
             print('[DOCSTRING]', arg_types)
             print()
 
@@ -65,6 +67,15 @@ class Checker:
     @staticmethod
     def directly_belongs_to(method_name: str, class_name: str) -> bool:
         return method_name.split('.')[0] == class_name
+
+    @staticmethod
+    def improve_type_infos(arg_types: Dict[str, str]) -> Dict[str, str]:
+        def improve_hints(types: str | None):
+            if types is None:
+                return None
+            return re.sub(r'\s+or\s+', ' | ', types)
+            ...
+        return {k: improve_hints(v) for k, v in arg_types.items()}
 
 
 def autohints(target_dir):
