@@ -1,13 +1,13 @@
 import os
 import sys
 import re
+
 sys.path.append('..')
 sys.path.append('quantum_info')
 import argparse
 import glob
 import importlib
 import inspect
-#from typing import get_type_hints
 import docstring_parser
 
 
@@ -16,23 +16,12 @@ if sys.version_info.major < 3 or sys.version_info.minor < 10:
     raise NotImplementedError(f'Python {info.major}.{info.minor}.{info.micro} is not supported')
 
 
-def isclass_in_file(class_name: str, module_name: str) -> bool:
-    return '.'.join(class_name.split('.')[:-1]) == module_name
-
-
-def directly_belongs_to(method_name: str, class_name: str) -> bool:
-    return method_name.split('.')[0] == class_name
-
-
 class Checker:
-    def __init__(self,
-                 file_path: str,
-                 module_name: str = 'quantum_info'
-    ):
+    def __init__(self, file_path: str, module_name: str = 'quantum_info'):
         file_path, _ = os.path.splitext(file_path)
         path_elems = file_path.split(os.sep)
         loc = path_elems.index(module_name)
-        self.module_name = '.'.join(path_elems[loc+1:])
+        self.module_name = '.'.join(path_elems[loc + 1 :])
         self.mod = importlib.import_module(self.module_name)
 
     def run(self):
@@ -43,15 +32,11 @@ class Checker:
             if inspect.isclass(obj_type):
                 self._class_proc(self.module_name, obj_name, obj_type)
 
-    def _class_proc(self,
-                    module_name: str,
-                    short_class_name: str,
-                    class_type
-    ):
+    def _class_proc(self, module_name: str, short_class_name: str, class_type):
         full_class_name = None
         if m := re.search(r"'(\S+)'", str(class_type)):
             full_class_name = m.group(1)
-        if isclass_in_file(full_class_name, module_name):
+        if self.isclass_in_file(full_class_name, module_name):
             # sig = inspect.signature(class_type)
             # print(class_type, '->', sig)
             for y in inspect.getmembers(class_type):
@@ -61,20 +46,25 @@ class Checker:
                 if inspect.isfunction(member_type):
                     self._method_proc(short_class_name, member_name, member_type)
 
-    def _method_proc(self,
-                     class_name: str,
-                     short_method_name: str,
-                     method_type):
+    def _method_proc(self, class_name: str, short_method_name: str, method_type):
         full_method_name = str(method_type).split(' ')[1]
-        if directly_belongs_to(full_method_name, class_name):
+        if self.directly_belongs_to(full_method_name, class_name):
             sig = inspect.signature(method_type)
             print(full_method_name, '=>', sig)
 
-            #print('[DOCSTRING]', inspect.getdoc(method_type))
+            # print('[DOCSTRING]', inspect.getdoc(method_type))
             docstring = docstring_parser.google.parse(inspect.getdoc(method_type))
             arg_types = {arg.arg_name: arg.type_name for arg in docstring.params}
             print('[DOCSTRING]', arg_types)
             print()
+
+    @staticmethod
+    def isclass_in_file(class_name: str, module_name: str) -> bool:
+        return '.'.join(class_name.split('.')[:-1]) == module_name
+
+    @staticmethod
+    def directly_belongs_to(method_name: str, class_name: str) -> bool:
+        return method_name.split('.')[0] == class_name
 
 
 def autohints(target_dir):
