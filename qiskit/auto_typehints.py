@@ -8,7 +8,7 @@ import glob
 import importlib
 import inspect
 #from typing import get_type_hints
-from docstring_parser import parse
+import docstring_parser
 
 
 if sys.version_info.major < 3 or sys.version_info.minor < 10:
@@ -70,9 +70,10 @@ class Checker:
             sig = inspect.signature(method_type)
             print(full_method_name, '=>', sig)
 
-            #docstring = parse(inspect.getdoc(method_type))
-            #arg_types = {arg.arg_name: int for arg in docstring.params}
-            print('[DOCSTRING]', inspect.getdoc(method_type))
+            #print('[DOCSTRING]', inspect.getdoc(method_type))
+            docstring = docstring_parser.google.parse(inspect.getdoc(method_type))
+            arg_types = {arg.arg_name: arg.type_name for arg in docstring.params}
+            print('[DOCSTRING]', arg_types)
             print()
 
 
