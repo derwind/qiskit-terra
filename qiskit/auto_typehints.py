@@ -216,7 +216,7 @@ class SignatureReplacer:
             fout.close()
 
 
-def autohints(target_dir: str, verbose: bool = False):
+def autohints(target_dir: str, out_file: str | None = None, verbose: bool = False):
     for file_path in glob.glob(os.path.join(target_dir, '**/*.py'), recursive=True):
         if os.path.basename(file_path) == 'statevector.py':
             signature_improver = SignatureImprover(file_path, verbose=verbose)
@@ -226,7 +226,7 @@ def autohints(target_dir: str, verbose: bool = False):
                 for method_name, signature in signature_improver.methods2signatures.items():
                     print(f'{method_name}{signature}')
 
-            signature_replacer = SignatureReplacer(file_path, signature_improver)
+            signature_replacer = SignatureReplacer(file_path, signature_improver, out_file_path=out_file)
             signature_replacer.run()
 
             break
@@ -234,6 +234,7 @@ def autohints(target_dir: str, verbose: bool = False):
 
 def parse_opt():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-o', '--output', dest='out_file', type=str, default=None, help='/path/to/file')
     parser.add_argument('--verbose', action='store_true', help='output logs?')
     parser.add_argument('dir', type=str, help='/path/to/directory')
 
@@ -244,7 +245,7 @@ def parse_opt():
 
 def main():
     args = parse_opt()
-    autohints(args.dir, args.verbose)
+    autohints(args.dir, args.out_file, args.verbose)
 
 
 if __name__ == '__main__':
