@@ -87,11 +87,15 @@ class Checker:
                     hint = doc_arg_types[name]
                 name2hint[name] = hint
             else:
-                name2hint[name] = detail.annotation
+                name2hint[name] = str(detail.annotation)
             # no default value
             if detail.default == inspect.Parameter.empty:
                 name2default[name] = inspect.Parameter.empty
             else:
+                # type hint doesn't suggest 'nullable' but default value does
+                if detail.default is None and name2hint[name] is not None:
+                    if 'Optional' not in name2hint[name] and 'None' not in name2hint[name]:
+                        name2hint[name] += ' | None'
                 name2default[name] = detail.default
 
         new_signature_elems = []
