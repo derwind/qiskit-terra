@@ -18,7 +18,7 @@ if sys.version_info.major < 3 or sys.version_info.minor < 10:
     raise NotImplementedError(f'Python {info.major}.{info.minor}.{info.micro} is not supported')
 
 
-class Checker:
+class SignatureImprover:
     def __init__(self, file_path: str, module_name: str = 'quantum_info', verbose: bool = False):
         file_path, _ = os.path.splitext(file_path)
         path_elems = file_path.split(os.sep)
@@ -155,7 +155,7 @@ class Checker:
 def autohints(target_dir: str, verbose: bool = False):
     for file_path in glob.glob(os.path.join(target_dir, '**/*.py'), recursive=True):
         if os.path.basename(file_path) == 'statevector.py':
-            methods2signatures = Checker(file_path, verbose=verbose).run()
+            methods2signatures = SignatureImprover(file_path, verbose=verbose).run()
             for method_name, signature in methods2signatures.items():
                 print(f'{method_name}{signature}')
             break
