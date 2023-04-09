@@ -87,27 +87,30 @@ class SignatureImprover:
     def _supplement_signature(
         self, signature: inspect.Signature, doc_arg_types: OrderedDict[str, str], doc_returns_types: str | inspect._empty
     ) -> str:
-        name2hint = OrderedDict()
-        name2default = OrderedDict()
+        name2hint = OrderedDict()  # key: qualified_name
+        name2default = OrderedDict()  # key: qualified_name
 
         for name, detail in signature.parameters.items():
+            # e.g., '**kwargs'
+            qualified_name = re.split(r'\s*:\s*', re.split(r'\s*=\s*', str(detail))[0])[0]
+
             # no type hint
             if detail.annotation == inspect.Parameter.empty:
                 hint = None
                 if name in doc_arg_types:
                     hint = doc_arg_types[name]
-                name2hint[name] = hint
+                name2hint[qualified_name] = hint
             else:
-                name2hint[name] = str(detail.annotation)
+                name2hint[qualified_name] = str(detail.annotation)
             # no default value
             if detail.default == inspect.Parameter.empty:
-                name2default[name] = inspect.Parameter.empty
+                name2default[qualified_name] = inspect.Parameter.empty
             else:
                 # type hint doesn't suggest 'nullable' but default value does
-                if detail.default is None and name2hint[name] is not None:
-                    if 'Optional' not in name2hint[name] and 'None' not in name2hint[name]:
-                        name2hint[name] += ' | None'
-                name2default[name] = detail.default
+                if detail.default is None and name2hint[qualified_name] is not None:
+                    if 'Optional' not in name2hint[qualified_name] and 'None' not in name2hint[qualified_name]:
+                        name2hint[qualified_name] += ' | None'
+                name2default[qualified_name] = detail.default
 
         new_signature_elems = []
         for name, hint in name2hint.items():
@@ -133,7 +136,7 @@ class SignatureImprover:
                     new_signature += f' -> {str(doc_returns_types)}'
 
         if self.verbose:
-            print(new_signature)
+            print('[Signature]', new_signature)
             print()
 
         return new_signature
