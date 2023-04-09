@@ -61,11 +61,11 @@ class Checker:
 
         signature = inspect.signature(method_type)
         if self.verbose:
-            print(full_method_name, '=>', signature.parameters, '->', signature.return_annotation)
+            print('[Type Hint]', full_method_name, '=>', signature.parameters, '->', signature.return_annotation)
 
         # print('[DOCSTRING]', inspect.getdoc(method_type))
         docstring = docstring_parser.google.parse(inspect.getdoc(method_type))
-        arg_types = {arg.arg_name: arg.type_name for arg in docstring.params}
+        arg_types = OrderedDict({arg.arg_name: arg.type_name for arg in docstring.params})
         returns_types = docstring.returns
         arg_types = self.modernize_type_infos(arg_types)
         if self.verbose:
@@ -73,38 +73,49 @@ class Checker:
 
         return short_method_name, self._supplement_signature(signature, arg_types, returns_types)
 
-    def _supplement_signature(self, signature: inspect.Signature, arg_types: Dict[str, str], returns_types: str | inspect._empty) -> str:
-        param_with_hints = OrderedDict()
+    def _supplement_signature(
+        self, signature: inspect.Signature, doc_arg_types: OrderedDict[str, str], doc_returns_types: str | inspect._empty
+    ) -> str:
+        name2hint = OrderedDict()
+        name2default = OrderedDict()
 
         for name, detail in signature.parameters.items():
             # no type hint
             if detail.annotation == inspect.Parameter.empty:
                 hint = None
-                if name in arg_types:
-                    hint = arg_types[name]
-                param_with_hints[name] = hint
+                if name in doc_arg_types:
+                    hint = doc_arg_types[name]
+                name2hint[name] = hint
             else:
-                param_with_hints[name] = detail.annotation
+                name2hint[name] = detail.annotation
+            # no default value
+            if detail.default == inspect.Parameter.empty:
+                name2default[name] = inspect.Parameter.empty
+            else:
+                name2default[name] = detail.default
 
         new_signature_elems = []
-        for name, hint in param_with_hints.items():
+        for name, hint in name2hint.items():
             if hint is not None:
-                new_signature_elems.append(f'{name}: {hint}')
+                name_with_info = f'{name}: {hint}'
             else:
-                new_signature_elems.append(name)
+                name_with_info = name
+            if name2default[name] != inspect.Parameter.empty:
+                name_with_info += f' = {name2default[name]}'
+            new_signature_elems.append(name_with_info)
         new_signature = '(' + ', '.join(new_signature_elems) + ')'
 
         if signature.return_annotation != inspect.Parameter.empty:  # from type hint
             new_signature += f' -> {self.extract_class_name(str(signature.return_annotation))}'
         else:
-            if returns_types:  # from docstring
-                if isinstance(returns_types, docstring_parser.common.DocstringReturns):
-                    new_signature += f' -> {returns_types.type_name}'
-                elif inspect.isclass(returns_types):
-                    full_class_name = self.extract_class_name(str(returns_types))
+            if doc_returns_types:  # from docstring
+                if isinstance(doc_returns_types, docstring_parser.common.DocstringReturns):
+                    new_signature += f' -> {doc_returns_types.type_name}'
+                elif inspect.isclass(doc_returns_types):
+                    full_class_name = self.extract_class_name(str(doc_returns_types))
                     new_signature += f' -> {full_class_name}'
                 else:
-                    new_signature += f' -> {str(returns_types)}'
+                    new_signature += f' -> {str(doc_returns_types)}'
 
         if self.verbose:
             print(new_signature)
