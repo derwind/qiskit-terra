@@ -200,6 +200,10 @@ class SignatureReplacer:
                             signature = self.signature_improver.methods2signatures[method_name]
                             loc = line.index('def')
                             print(f'{" " * loc}def {method_name}{signature}:', file=fout)
+                        else:
+                            # not improvements, just output
+                            print(line, file=fout)
+
                         if ':' in line:
                             method_name = None  # forget immediately
                     else:
