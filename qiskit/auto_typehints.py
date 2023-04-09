@@ -26,8 +26,16 @@ class SignatureImprover:
         self.module_name = '.'.join(path_elems[loc + 1 :])
         self.mod = importlib.import_module(self.module_name)
         self.verbose = verbose
+        self._methods2signatures = None
+
+    @property
+    def methods2signatures(self):
+        return self._methods2signatures
 
     def run(self) -> Dict[str, str]:
+        if self._methods2signatures is not None:
+            return self._methods2signatures
+
         methods2signatures = {}
         for x in inspect.getmembers(self.mod):
             if not isinstance(x, tuple):
@@ -36,7 +44,9 @@ class SignatureImprover:
             if inspect.isclass(obj_type):
                 m2th = self._class_proc(self.module_name, obj_name, obj_type)
                 methods2signatures.update(m2th)
-        return methods2signatures
+
+        self._methods2signatures = methods2signatures
+        return self._methods2signatures
 
     def _class_proc(self, module_name: str, short_class_name: str, class_type) -> Dict[str, str]:
         methods2signatures = {}
@@ -52,6 +62,7 @@ class SignatureImprover:
                     method_name, signature = self._method_proc(short_class_name, member_name, member_type)
                     if method_name is not None:
                         methods2signatures[method_name] = signature
+
         return methods2signatures
 
     def _method_proc(self, class_name: str, short_method_name: str, method_type) -> Tuple[str, str] | Tuple[None, None]:
@@ -152,12 +163,38 @@ class SignatureImprover:
         return {k: improve_hints(v) for k, v in arg_types.items()}
 
 
+class SignatureReplacer:
+    def __init__(self, file_path: str, signature_improver: SignatureImprover, out_file_path: str | None = None):
+        self.file_path = file_path
+        self.signature_improver = signature_improver
+        self.out_file_path = out_file_path
+
+    def run(self):
+        fout = sys.stdout
+        if self.out_file_path is not None:
+            fout = open(self.out_file_path, 'w')
+
+        with open(self.file_path) as fin:
+            for line in fin.readlines():
+                print(line, file=fout)
+
+        if fout != sys.stdout:
+            fout.close()
+
+
 def autohints(target_dir: str, verbose: bool = False):
     for file_path in glob.glob(os.path.join(target_dir, '**/*.py'), recursive=True):
         if os.path.basename(file_path) == 'statevector.py':
-            methods2signatures = SignatureImprover(file_path, verbose=verbose).run()
-            for method_name, signature in methods2signatures.items():
-                print(f'{method_name}{signature}')
+            signature_improver = SignatureImprover(file_path, verbose=verbose)
+            signature_improver.run()
+
+            if verbose:
+                for method_name, signature in signature_improver.methods2signatures.items():
+                    print(f'{method_name}{signature}')
+
+            signature_replacer = SignatureReplacer(file_path, signature_improver)
+            signature_replacer.run()
+
             break
 
 
