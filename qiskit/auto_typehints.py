@@ -65,9 +65,9 @@ class SignatureImprover:
 
         return methods2signatures
 
-    def _method_proc(self, class_name: str, short_method_name: str, method_type) -> Tuple[str, str] | Tuple[None, None]:
+    def _method_proc(self, short_class_name: str, short_method_name: str, method_type) -> Tuple[str, str] | Tuple[None, None]:
         full_method_name = str(method_type).split(' ')[1]
-        if not self.directly_belongs_to(full_method_name, class_name):
+        if not self.directly_belongs_to(full_method_name, short_class_name):
             return None, None
 
         signature = inspect.signature(method_type)
@@ -82,11 +82,14 @@ class SignatureImprover:
         if self.verbose:
             print('[DOCSTRING]', arg_types, '->', returns_types.args[-1] if returns_types else '')
 
-        return short_method_name, self._supplement_signature(signature, arg_types, returns_types)
+        return short_method_name, self._supplement_signature(signature, arg_types, returns_types, short_class_name)
 
     def _supplement_signature(
-        self, signature: inspect.Signature, doc_arg_types: OrderedDict[str, str], doc_returns_types: str | inspect._empty
+        self, signature: inspect.Signature, doc_arg_types: OrderedDict[str, str], doc_returns_types: str | inspect._empty, short_class_name: str
     ) -> str:
+        def forward_referenced(hint, class_name=short_class_name):
+            return f"'{hint}'" if hint == class_name else hint
+
         name2hint = OrderedDict()  # key: qualified_name
         name2default = OrderedDict()  # key: qualified_name
 
@@ -99,9 +102,9 @@ class SignatureImprover:
                 hint = None
                 if name in doc_arg_types:
                     hint = doc_arg_types[name]
-                name2hint[qualified_name] = hint
+                name2hint[qualified_name] = forward_referenced(hint)
             else:
-                name2hint[qualified_name] = str(detail.annotation)
+                name2hint[qualified_name] = forward_referenced(str(detail.annotation))
             # no default value
             if detail.default == inspect.Parameter.empty:
                 name2default[qualified_name] = inspect.Parameter.empty
@@ -124,16 +127,16 @@ class SignatureImprover:
         new_signature = '(' + ', '.join(new_signature_elems) + ')'
 
         if signature.return_annotation != inspect.Parameter.empty:  # from type hint
-            new_signature += f' -> {self.extract_class_name(str(signature.return_annotation))}'
+            new_signature += f' -> {forward_referenced(self.extract_class_name(str(signature.return_annotation)))}'
         else:
             if doc_returns_types:  # from docstring
                 if isinstance(doc_returns_types, docstring_parser.common.DocstringReturns):
-                    new_signature += f' -> {doc_returns_types.type_name}'
+                    new_signature += f' -> {forward_referenced(doc_returns_types.type_name)}'
                 elif inspect.isclass(doc_returns_types):
                     full_class_name = self.extract_class_name(str(doc_returns_types))
-                    new_signature += f' -> {full_class_name}'
+                    new_signature += f' -> {forward_referenced(full_class_name)}'
                 else:
-                    new_signature += f' -> {str(doc_returns_types)}'
+                    new_signature += f' -> {forward_referenced(str(doc_returns_types))}'
 
         if self.verbose:
             print('[Signature]', new_signature)
