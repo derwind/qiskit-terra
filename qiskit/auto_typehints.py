@@ -57,25 +57,32 @@ class SignatureImprover:
             for y in inspect.getmembers(class_type):
                 if not isinstance(y, tuple):
                     continue
-                member_name, member_type = y
-                if inspect.isfunction(member_type):
-                    method_name, signature = self._method_proc(short_class_name, member_name, member_type)
+                member_name, insp_member = y
+                # normal method or bound method
+                if inspect.isfunction(insp_member) or inspect.ismethod(insp_member):
+                    method_name, signature = self._method_proc(short_class_name, member_name, insp_member)
                     if method_name is not None:
                         methods2signatures[method_name] = signature
 
         return methods2signatures
 
-    def _method_proc(self, short_class_name: str, short_method_name: str, method_type) -> Tuple[str, str] | Tuple[None, None]:
-        full_method_name = str(method_type).split(' ')[1]
+    def _method_proc(self, short_class_name: str, short_method_name: str, insp_method) -> Tuple[str, str] | Tuple[None, None]:
+        if inspect.isfunction(insp_method):
+            full_method_name = str(insp_method).split(' ')[1]
+        elif inspect.ismethod(insp_method):
+            full_method_name = str(insp_method).split(' ')[2]
+        else:
+            raise NotImplementedError(f'Not supported: {insp_method}')
+
         if not self.directly_belongs_to(full_method_name, short_class_name):
             return None, None
 
-        signature = inspect.signature(method_type)
+        signature = inspect.signature(insp_method)
         if self.verbose:
             print('[Type Hint]', full_method_name, '=>', signature.parameters, '->', signature.return_annotation)
 
         # print('[DOCSTRING]', inspect.getdoc(method_type))
-        docstring = docstring_parser.google.parse(inspect.getdoc(method_type))
+        docstring = docstring_parser.google.parse(inspect.getdoc(insp_method))
         arg_types = OrderedDict({arg.arg_name: arg.type_name for arg in docstring.params})
         returns_types = docstring.returns
         arg_types = self.modernize_type_infos(arg_types)
@@ -87,8 +94,13 @@ class SignatureImprover:
     def _supplement_signature(
         self, signature: inspect.Signature, doc_arg_types: OrderedDict[str, str], doc_returns_types: str | inspect._empty, short_class_name: str
     ) -> str:
-        def forward_referenced(hint, class_name=short_class_name):
-            return f"'{hint}'" if hint == class_name else hint
+        def fix_hint(hint, class_name=short_class_name):
+            if hint == class_name:
+                return f"'{hint}'"
+            elif hint == 'string':
+                return 'str'
+            else:
+                return hint
 
         name2hint = OrderedDict()  # key: qualified_name
         name2default = OrderedDict()  # key: qualified_name
@@ -102,9 +114,9 @@ class SignatureImprover:
                 hint = None
                 if name in doc_arg_types:
                     hint = doc_arg_types[name]
-                name2hint[qualified_name] = forward_referenced(hint)
+                name2hint[qualified_name] = fix_hint(hint)
             else:
-                name2hint[qualified_name] = forward_referenced(str(detail.annotation))
+                name2hint[qualified_name] = fix_hint(str(detail.annotation))
             # no default value
             if detail.default == inspect.Parameter.empty:
                 name2default[qualified_name] = inspect.Parameter.empty
@@ -127,16 +139,16 @@ class SignatureImprover:
         new_signature = '(' + ', '.join(new_signature_elems) + ')'
 
         if signature.return_annotation != inspect.Parameter.empty:  # from type hint
-            new_signature += f' -> {forward_referenced(self.extract_class_name(str(signature.return_annotation)))}'
+            new_signature += f' -> {fix_hint(self.extract_class_name(str(signature.return_annotation)))}'
         else:
             if doc_returns_types:  # from docstring
                 if isinstance(doc_returns_types, docstring_parser.common.DocstringReturns):
-                    new_signature += f' -> {forward_referenced(doc_returns_types.type_name)}'
+                    new_signature += f' -> {fix_hint(doc_returns_types.type_name)}'
                 elif inspect.isclass(doc_returns_types):
                     full_class_name = self.extract_class_name(str(doc_returns_types))
-                    new_signature += f' -> {forward_referenced(full_class_name)}'
+                    new_signature += f' -> {fix_hint(full_class_name)}'
                 else:
-                    new_signature += f' -> {forward_referenced(str(doc_returns_types))}'
+                    new_signature += f' -> {fix_hint(str(doc_returns_types))}'
 
         if self.verbose:
             print('[Signature]', new_signature)
