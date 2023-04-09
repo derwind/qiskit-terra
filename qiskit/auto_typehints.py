@@ -175,8 +175,38 @@ class SignatureReplacer:
             fout = open(self.out_file_path, 'w')
 
         with open(self.file_path) as fin:
+            class_name = None
+            method_name = None
             for line in fin.readlines():
-                print(line, file=fout)
+                line = line.rstrip()
+
+                # end of class definition
+                if class_name is not None and re.search(r'^\S', line):
+                    class_name = None
+
+                # end of method signature
+                if method_name is not None and ':' in line:
+                    method_name = None
+
+                if m := re.search(r'^class\s+(\S+)\s*\(', line):
+                    class_name = m.group(1)
+                    print(line, file=fout)
+                    continue
+
+                if class_name is not None:
+                    if m := re.search(r'^\s+def\s+(\S+)\s*\(', line):
+                        method_name = m.group(1)
+                        if method_name in self.signature_improver.methods2signatures:
+                            signature = self.signature_improver.methods2signatures[method_name]
+                            loc = line.index('def')
+                            print(f'{" " * loc}def {method_name}{signature}:', file=fout)
+                        if ':' in line:
+                            method_name = None  # forget immediately
+                    else:
+                        if method_name is None:
+                            print(line, file=fout)
+                else:
+                    print(line, file=fout)
 
         if fout != sys.stdout:
             fout.close()
