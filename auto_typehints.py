@@ -189,18 +189,21 @@ class SignatureReplacer:
     Args:
         file_path (str): /path/to/file
         signature_improver (SignatureImprover): SignatureImprover instance which has already run
-        out_file_path (str | None): /path/to/out_file or stdout
+        suffix (str | None): suffix of file or stdout
     """
 
-    def __init__(self, file_path: str, signature_improver: SignatureImprover, out_file_path: str | None = None):
+    def __init__(self, file_path: str, signature_improver: SignatureImprover, suffix: str | None = None):
         self.file_path = file_path
         self.signature_improver = signature_improver
-        self.out_file_path = out_file_path
+        self.suffix = suffix
 
     def run(self):
         fout = sys.stdout
-        if self.out_file_path is not None:
-            fout = open(self.out_file_path, 'w')
+        if self.suffix is not None:
+            dirname = os.path.dirname(self.file_path)
+            basename, ext = os.path.splitext(os.path.basename(self.file_path))
+            out_file_path = os.path.join(dirname, f'{basename}{self.suffix}{ext}')
+            fout = open(out_file_path, 'w')
 
         with open(self.file_path) as fin:
             class_name = None
@@ -244,7 +247,7 @@ class SignatureReplacer:
             fout.close()
 
 
-def autohints(module_name: str, qiskit_root: str, out_file: str | None = None, verbose: bool = False):
+def autohints(module_name: str, qiskit_root: str, suffix: str | None = None, verbose: bool = False):
     module_root = None
     for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
         if os.path.isdir(file_path):
@@ -261,7 +264,7 @@ def autohints(module_name: str, qiskit_root: str, out_file: str | None = None, v
     sys.path.append(module_root)
 
     for file_path in glob.glob(os.path.join(module_root, '**/*.py'), recursive=True):
-        if os.path.basename(file_path) == 'statevector.py':
+        try:
             signature_improver = SignatureImprover(file_path, verbose=verbose)
             signature_improver.run()
 
@@ -270,16 +273,16 @@ def autohints(module_name: str, qiskit_root: str, out_file: str | None = None, v
                     for method_name, signature in signature_improver.methods2signatures(class_name).items():
                         print(f'{method_name}{signature}')
 
-            signature_replacer = SignatureReplacer(file_path, signature_improver, out_file_path=out_file)
+            signature_replacer = SignatureReplacer(file_path, signature_improver, suffix=suffix)
             signature_replacer.run()
-
-            break
+        except Exception as e:
+            print(file_path, e, file=sys.stderr)
 
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--output', dest='out_file', type=str, default=None, help='/path/to/file')
     parser.add_argument('--qiskit-root', dest='qiskit_root', type=str, default='qiskit', help='/path/to/qiskit_root')
+    parser.add_argument('--suffix', dest='suffix', type=str, default=None, help='suffix of file')
     parser.add_argument('--verbose', action='store_true', help='output logs?')
     parser.add_argument('module_name', type=str, help="module_name such as 'quantum_info'")
 
@@ -290,7 +293,7 @@ def parse_opt():
 
 def main():
     args = parse_opt()
-    autohints(args.module_name, args.qiskit_root, args.out_file, args.verbose)
+    autohints(args.module_name, args.qiskit_root, args.suffix, args.verbose)
 
 
 if __name__ == '__main__':
