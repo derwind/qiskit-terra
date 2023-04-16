@@ -1,9 +1,6 @@
 import os
 import sys
 import re
-
-sys.path.append('..')
-sys.path.append('quantum_info')
 import argparse
 import glob
 import importlib
@@ -20,10 +17,10 @@ if sys.version_info.major < 3 or sys.version_info.minor < 10:
 
 class SignatureImprover:
     def __init__(self, file_path: str, module_name: str = 'quantum_info', verbose: bool = False):
-        file_path, _ = os.path.splitext(file_path)
-        path_elems = file_path.split(os.sep)
+        file_path, _ = os.path.splitext(file_path)  # e.g. path/to/quantum_info/states/statevector
+        path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', quantum_info', 'states', 'statevector']
         loc = path_elems.index(module_name)
-        self.module_name = '.'.join(path_elems[loc + 1 :])
+        self.module_name = '.'.join(path_elems[loc + 1 :])  # e.g. 'states.statevector'
         self.mod = importlib.import_module(self.module_name)
         self.verbose = verbose
         self._methods2signatures = None
@@ -239,8 +236,23 @@ class SignatureReplacer:
             fout.close()
 
 
-def autohints(target_dir: str, out_file: str | None = None, verbose: bool = False):
-    for file_path in glob.glob(os.path.join(target_dir, '**/*.py'), recursive=True):
+def autohints(module_name: str, qiskit_root: str, out_file: str | None = None, verbose: bool = False):
+    module_root = None
+    for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
+        if os.path.isdir(file_path):
+            if file_path[-1] == os.sep:
+                file_path = file_path[:-1]
+            if file_path.split(os.sep)[-1] == module_name:
+                module_root = file_path
+                break
+
+    if module_root is None:
+        raise ModuleNotFoundError(f"'{module_name}' is not found")
+
+    sys.path.append(qiskit_root)
+    sys.path.append(module_root)
+
+    for file_path in glob.glob(os.path.join(module_root, '**/*.py'), recursive=True):
         if os.path.basename(file_path) == 'statevector.py':
             signature_improver = SignatureImprover(file_path, verbose=verbose)
             signature_improver.run()
@@ -258,8 +270,9 @@ def autohints(target_dir: str, out_file: str | None = None, verbose: bool = Fals
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', '--output', dest='out_file', type=str, default=None, help='/path/to/file')
+    parser.add_argument('--qiskit-root', dest='qiskit_root', type=str, default='qiskit', help='/path/to/qiskit_root')
     parser.add_argument('--verbose', action='store_true', help='output logs?')
-    parser.add_argument('dir', type=str, help='/path/to/directory')
+    parser.add_argument('module_name', type=str, help="module_name such as 'quantum_info'")
 
     args = parser.parse_args()
 
@@ -268,7 +281,7 @@ def parse_opt():
 
 def main():
     args = parse_opt()
-    autohints(args.dir, args.out_file, args.verbose)
+    autohints(args.module_name, args.qiskit_root, args.out_file, args.verbose)
 
 
 if __name__ == '__main__':
