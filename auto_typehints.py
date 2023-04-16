@@ -15,43 +15,10 @@ if sys.version_info.major < 3 or sys.version_info.minor < 10:
     raise NotImplementedError(f'Python {info.major}.{info.minor}.{info.micro} is not supported')
 
 
-class SignatureImprover:
-    def __init__(self, file_path: str, module_name: str = 'quantum_info', verbose: bool = False):
-        file_path, _ = os.path.splitext(file_path)  # e.g. path/to/quantum_info/states/statevector
-        path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', quantum_info', 'states', 'statevector']
-        loc = path_elems.index(module_name)
-        self.module_name = '.'.join(path_elems[loc + 1 :])  # e.g. 'states.statevector'
-        self.mod = importlib.import_module(self.module_name)
+class ClassInfo:
+    def __init__(self, module_name: str, short_class_name: str, class_type, verbose: bool = False) -> Dict[str, str]:
         self.verbose = verbose
-        self._methods2signatures = None
-
-    @property
-    def methods2signatures(self):
-        return self._methods2signatures
-
-    def run(self) -> Dict[str, str]:
-        """Construct a new signature for the method after constructing the type hint from docstring and return it as a dictionary from the method name.
-
-        Returns:
-            Dict[str, str]: method name to signature
-        """
-        if self._methods2signatures is not None:
-            return self._methods2signatures
-
-        methods2signatures = {}
-        for x in inspect.getmembers(self.mod):
-            if not isinstance(x, tuple):
-                continue
-            obj_name, obj_type = x
-            if inspect.isclass(obj_type):
-                m2th = self._class_proc(self.module_name, obj_name, obj_type)
-                methods2signatures.update(m2th)
-
-        self._methods2signatures = methods2signatures
-        return self._methods2signatures
-
-    def _class_proc(self, module_name: str, short_class_name: str, class_type) -> Dict[str, str]:
-        methods2signatures = {}
+        self._methods2signatures = {}
         full_class_name = self.extract_class_name(str(class_type))
         if self.isclass_in_file(full_class_name, module_name):
             # sig = inspect.signature(class_type)
@@ -64,9 +31,11 @@ class SignatureImprover:
                 if inspect.isfunction(insp_member) or inspect.ismethod(insp_member):
                     method_name, signature = self._method_proc(short_class_name, member_name, insp_member)
                     if method_name is not None:
-                        methods2signatures[method_name] = signature
+                        self._methods2signatures[method_name] = signature
 
-        return methods2signatures
+    @property
+    def methods2signatures(self):
+        return self._methods2signatures
 
     def _method_proc(self, short_class_name: str, short_method_name: str, insp_method) -> Tuple[str, str] | Tuple[None, None]:
         if inspect.isfunction(insp_method):
@@ -183,7 +152,45 @@ class SignatureImprover:
         return {k: improve_hints(v) for k, v in arg_types.items()}
 
 
+class SignatureImprover:
+    def __init__(self, file_path: str, module_name: str = 'quantum_info', verbose: bool = False):
+        file_path, _ = os.path.splitext(file_path)  # e.g. path/to/quantum_info/states/statevector
+        path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', quantum_info', 'states', 'statevector']
+        loc = path_elems.index(module_name)
+        self.module_name = '.'.join(path_elems[loc + 1 :])  # e.g. 'states.statevector'
+        self.mod = importlib.import_module(self.module_name)
+        self.verbose = verbose
+        self._classname2info: Dict[str, ClassInfo] = {}
+
+    @property
+    def class_names(self):
+        return self._classname2info.keys()
+
+    def methods2signatures(self, class_name: str):
+        if class_name in self._classname2info:
+            return self._classname2info[class_name].methods2signatures
+        else:
+            return None
+
+    def run(self) -> None:
+        """Construct a new signature for the method after constructing the type hint from docstring and return it as a dictionary from the method name."""
+        for x in inspect.getmembers(self.mod):
+            if not isinstance(x, tuple):
+                continue
+            obj_name, obj_type = x
+            if inspect.isclass(obj_type):
+                info = ClassInfo(self.module_name, obj_name, obj_type, self.verbose)
+                self._classname2info[obj_name] = info
+
+
 class SignatureReplacer:
+    """Update signatures of the methods in the given file and output the updated file.
+
+    Args:
+        file_path (str): /path/to/file
+        signature_improver (SignatureImprover): SignatureImprover instance which has already run
+        out_file_path (str | None): /path/to/out_file or stdout
+    """
     def __init__(self, file_path: str, signature_improver: SignatureImprover, out_file_path: str | None = None):
         self.file_path = file_path
         self.signature_improver = signature_improver
@@ -216,8 +223,8 @@ class SignatureReplacer:
                 if class_name is not None:
                     if m := re.search(r'^\s+def\s+(\S+)\s*\(', line):
                         method_name = m.group(1)
-                        if method_name in self.signature_improver.methods2signatures:
-                            signature = self.signature_improver.methods2signatures[method_name]
+                        if method_name in self.signature_improver.methods2signatures(class_name):
+                            signature = self.signature_improver.methods2signatures(class_name)[method_name]
                             loc = line.index('def')
                             print(f'{" " * loc}def {method_name}{signature}:', file=fout)
                         else:
@@ -258,8 +265,9 @@ def autohints(module_name: str, qiskit_root: str, out_file: str | None = None, v
             signature_improver.run()
 
             if verbose:
-                for method_name, signature in signature_improver.methods2signatures.items():
-                    print(f'{method_name}{signature}')
+                for class_name in signature_improver.class_names:
+                    for method_name, signature in signature_improver.methods2signatures(class_name).items():
+                        print(f'{method_name}{signature}')
 
             signature_replacer = SignatureReplacer(file_path, signature_improver, out_file_path=out_file)
             signature_replacer.run()
