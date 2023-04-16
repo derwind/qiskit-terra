@@ -191,6 +191,7 @@ class SignatureReplacer:
         signature_improver (SignatureImprover): SignatureImprover instance which has already run
         out_file_path (str | None): /path/to/out_file or stdout
     """
+
     def __init__(self, file_path: str, signature_improver: SignatureImprover, out_file_path: str | None = None):
         self.file_path = file_path
         self.signature_improver = signature_improver
