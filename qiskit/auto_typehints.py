@@ -33,6 +33,11 @@ class SignatureImprover:
         return self._methods2signatures
 
     def run(self) -> Dict[str, str]:
+        """Construct a new signature for the method after constructing the type hint from docstring and return it as a dictionary from the method name.
+
+        Returns:
+            Dict[str, str]: method name to signature
+        """
         if self._methods2signatures is not None:
             return self._methods2signatures
 
