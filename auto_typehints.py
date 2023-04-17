@@ -62,14 +62,15 @@ class ClassInfo:
         returns_types = docstring.returns
         arg_types = self.modernize_type_infos(arg_types)
         if self.verbose:
-            print('[DOCSTRING]', arg_types, '->', returns_types.args[-1] if returns_types else '')
+            ok = returns_types and returns_types.args[-1] not in self.ignore_cases
+            print('[DOCSTRING]', arg_types, '->', returns_types.args[-1] if ok else '')
 
         return short_method_name, self._supplement_signature(signature, arg_types, returns_types, short_class_name)
 
     def _supplement_signature(
         self, signature: inspect.Signature, doc_arg_types: OrderedDict[str, str], doc_returns_types: str | inspect._empty, short_class_name: str
     ) -> str:
-        def fix_hint(hint, class_name=short_class_name):
+        def fix_hint(hint, class_name: str = short_class_name):
             if hint == class_name:
                 return f"'{hint}'"
             elif hint == 'string':
@@ -118,11 +119,13 @@ class ClassInfo:
         else:
             if doc_returns_types:  # from docstring
                 if isinstance(doc_returns_types, docstring_parser.common.DocstringReturns):
-                    new_signature += f' -> {fix_hint(doc_returns_types.type_name)}'
+                    if doc_returns_types.type_name not in self.ignore_cases:
+                        new_signature += f' -> {fix_hint(doc_returns_types.type_name)}'
                 elif inspect.isclass(doc_returns_types):
                     full_class_name = self.extract_class_name(str(doc_returns_types))
                     new_signature += f' -> {fix_hint(full_class_name)}'
                 else:
+                    print(doc_returns_types)
                     new_signature += f' -> {fix_hint(str(doc_returns_types))}'
 
         if self.verbose:
@@ -146,14 +149,16 @@ class ClassInfo:
     def directly_belongs_to(method_name: str, class_name: str) -> bool:
         return method_name.split('.')[0] == class_name
 
-    @staticmethod
-    def modernize_type_infos(arg_types: Dict[str, str]) -> Dict[str, str]:
+    @classmethod
+    def modernize_type_infos(cls, arg_types: Dict[str, str]) -> Dict[str, str]:
         def improve_hints(types: str | None):
-            if types is None:
+            if types is None or types in cls.ignore_cases:
                 return None
             return re.sub(r'\s+or\s+', ' | ', types)
 
         return {k: improve_hints(v) for k, v in arg_types.items()}
+
+    ignore_cases = frozenset({'CLASS'})
 
 
 class SignatureImprover:
@@ -270,7 +275,9 @@ class SignatureReplacer:
             shutil.move(out_file_path, self.file_path)
 
 
-def autohints(module_name: str, qiskit_root: str, suffix: str | None = None, inplace: bool = False, only_filename: str | None = None, verbose: bool = False):
+def autohints(
+    module_name: str, qiskit_root: str, suffix: str | None = None, inplace: bool = False, only_filename: str | None = None, verbose: bool = False
+):
     module_root = None
     for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
         if os.path.isdir(file_path):
