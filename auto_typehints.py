@@ -53,7 +53,11 @@ class ClassInfo:
             print('[Type Hint]', full_method_name, '=>', signature.parameters, '->', signature.return_annotation)
 
         # print('[DOCSTRING]', inspect.getdoc(method_type))
-        docstring = docstring_parser.google.parse(inspect.getdoc(insp_method))
+        try:
+            # may contain invalid docstring
+            docstring = docstring_parser.google.parse(inspect.getdoc(insp_method))
+        except:
+            return None, None
         arg_types = OrderedDict({arg.arg_name: arg.type_name for arg in docstring.params})
         returns_types = docstring.returns
         arg_types = self.modernize_type_infos(arg_types)
