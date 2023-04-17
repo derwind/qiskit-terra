@@ -154,10 +154,10 @@ class ClassInfo:
 
 class SignatureImprover:
     def __init__(self, file_path: str, module_name: str = 'quantum_info', verbose: bool = False):
-        file_path, _ = os.path.splitext(file_path)  # e.g. path/to/quantum_info/states/statevector
-        path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', quantum_info', 'states', 'statevector']
-        loc = path_elems.index(module_name)
-        self.module_name = '.'.join(path_elems[loc + 1 :])  # e.g. 'states.statevector'
+        file_path, _ = os.path.splitext(file_path)  # e.g. path/to/qiskit/quantum_info/states/statevector
+        path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', 'qiskit', 'quantum_info', 'states', 'statevector']
+        loc = path_elems.index('qiskit')
+        self.module_name = '.'.join(path_elems[loc:])  # e.g. 'qiskit.quantum_info.states.statevector'
         self.mod = importlib.import_module(self.module_name)
         self.verbose = verbose
         self._classname2info: Dict[str, ClassInfo] = {}
@@ -247,7 +247,7 @@ class SignatureReplacer:
             fout.close()
 
 
-def autohints(module_name: str, qiskit_root: str, suffix: str | None = None, verbose: bool = False):
+def autohints(module_name: str, qiskit_root: str, suffix: str | None = None, only_filename: str | None = None, verbose: bool = False):
     module_root = None
     for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
         if os.path.isdir(file_path):
@@ -264,6 +264,11 @@ def autohints(module_name: str, qiskit_root: str, suffix: str | None = None, ver
     sys.path.append(module_root)
 
     for file_path in glob.glob(os.path.join(module_root, '**/*.py'), recursive=True):
+        if suffix is not None and file_path.endswith(f'{suffix}.py'):
+            continue
+        if only_filename is not None and os.path.basename(file_path) != only_filename:
+            continue
+
         try:
             signature_improver = SignatureImprover(file_path, verbose=verbose)
             signature_improver.run()
@@ -283,6 +288,7 @@ def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--qiskit-root', dest='qiskit_root', type=str, default='qiskit', help='/path/to/qiskit_root')
     parser.add_argument('--suffix', dest='suffix', type=str, default=None, help='suffix of file')
+    parser.add_argument('--only', dest='only_filename', type=str, default=None, help='file name')
     parser.add_argument('--verbose', action='store_true', help='output logs?')
     parser.add_argument('module_name', type=str, help="module_name such as 'quantum_info'")
 
@@ -293,7 +299,7 @@ def parse_opt():
 
 def main():
     args = parse_opt()
-    autohints(args.module_name, args.qiskit_root, args.suffix, args.verbose)
+    autohints(args.module_name, args.qiskit_root, args.suffix, args.only_filename, args.verbose)
 
 
 if __name__ == '__main__':
