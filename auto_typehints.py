@@ -218,6 +218,7 @@ class SignatureReplacer:
         with open(self.file_path) as fin:
             class_name = None
             method_name = None
+            new_method_decl = None
             for line in fin.readlines():
                 line = line.rstrip()
 
@@ -227,7 +228,11 @@ class SignatureReplacer:
 
                 # end of method signature
                 if method_name is not None and ':' in line:
+                    if new_method_decl is not None:
+                        print(new_method_decl, file=fout)
+                        new_method_decl = None
                     method_name = None
+                    continue
 
                 if m := re.search(r'^class\s+(\S+)\s*\(', line):
                     class_name = m.group(1)
@@ -240,12 +245,15 @@ class SignatureReplacer:
                         if method_name in self.signature_improver.methods2signatures(class_name):
                             signature = self.signature_improver.methods2signatures(class_name)[method_name]
                             loc = line.index('def')
-                            print(f'{" " * loc}def {method_name}{signature}:', file=fout)
+                            new_method_decl = f'{" " * loc}def {method_name}{signature}:'
                         else:
                             # not improvements, just output
                             print(line, file=fout)
 
                         if ':' in line:
+                            if new_method_decl is not None:
+                                print(new_method_decl, file=fout)
+                                new_method_decl = None
                             method_name = None  # forget immediately
                     else:
                         if method_name is None:
