@@ -1,3 +1,3 @@
 #!/bin/sh
 
-python -B auto_typehints.py --qiskit-root qiskit --suffix .hinted quantum_info
+python -B auto_typehints.py --qiskit-root qiskit --inplace quantum_info
