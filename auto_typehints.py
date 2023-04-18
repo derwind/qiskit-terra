@@ -65,7 +65,12 @@ class ClassInfo:
             ok = returns_types and returns_types.args[-1] not in self.ignore_cases
             print('[DOCSTRING]', arg_types, '->', returns_types.args[-1] if ok else '')
 
-        return short_method_name, self._supplement_signature(signature, arg_types, returns_types, short_class_name)
+        new_signature = self._supplement_signature(signature, arg_types, returns_types, short_class_name)
+        if self.verbose:
+            print(f'[Signature] {short_method_name}{new_signature}')
+            print()
+
+        return short_method_name, new_signature
 
     def _supplement_signature(
         self, signature: inspect.Signature, doc_arg_types: OrderedDict[str, str], doc_returns_types: str | inspect._empty, short_class_name: str
@@ -127,10 +132,6 @@ class ClassInfo:
                 else:
                     print(doc_returns_types)
                     new_signature += f' -> {fix_hint(str(doc_returns_types))}'
-
-        if self.verbose:
-            print('[Signature]', new_signature)
-            print()
 
         return new_signature
 
@@ -304,9 +305,11 @@ def autohints(
             signature_improver.run()
 
             if verbose:
+                print('Signatures per class')
                 for class_name in signature_improver.class_names:
+                    print(f'[{class_name}]')
                     for method_name, signature in signature_improver.methods2signatures(class_name).items():
-                        print(f'{method_name}{signature}')
+                        print(f'  {method_name}{signature}')
 
             signature_replacer = SignatureReplacer(file_path, signature_improver, suffix=suffix, inplace=inplace)
             signature_replacer.run()
