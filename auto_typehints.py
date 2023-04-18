@@ -116,12 +116,18 @@ class ClassInfo:
         is_classmethod: bool,
     ) -> str:
         def fix_hint(hint, class_name: str = short_class_name):
-            if hint == class_name:
-                return f"'{hint}'"
-            elif hint == 'string':
-                return 'str'
-            else:
-                return hint
+            if hint is None:
+                return None
+
+            hint_parts = []
+            for h in re.split(r'\s*\|\s*', hint):
+                if h == class_name:
+                    hint_parts.append(f"'{h}'")
+                elif h == 'string':
+                    hint_parts.append('str')
+                else:
+                    hint_parts.append(h)
+            return ' | '.join(hint_parts)
 
         name2hint = OrderedDict()  # key: qualified_name
         name2default = OrderedDict()  # key: qualified_name
