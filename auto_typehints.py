@@ -5,6 +5,8 @@ import argparse
 import glob
 import importlib
 import inspect
+import ast
+from dataclasses import dataclass
 import docstring_parser
 from collections import OrderedDict
 from typing import Dict, Tuple
@@ -13,6 +15,35 @@ from typing import Dict, Tuple
 if sys.version_info.major < 3 or sys.version_info.minor < 10:
     info = sys.version_info
     raise NotImplementedError(f'Python {info.major}.{info.minor}.{info.micro} is not supported')
+
+
+@dataclass(eq=False)
+class AstClassInfo:
+    module: str
+    alias: str | None
+
+
+class ImportVisitor(ast.NodeVisitor):
+    def __init__(self):
+        self._modules = {}
+        self._name2info = {}
+
+    @property
+    def modules(self):
+        return self._modules
+
+    @property
+    def name2info(self):
+        return self._name2info
+
+    def visit_Import(self, node):
+        for alias in node.names:
+            self._modules[alias.name] = alias.asname
+
+    def visit_ImportFrom(self, node):
+        module = node.module or ''
+        for alias in node.names:
+            self._name2info[alias.name] = AstClassInfo(module, alias.name)
 
 
 class ClassInfo:
@@ -77,7 +108,12 @@ class ClassInfo:
         return short_method_name, new_signature
 
     def _supplement_signature(
-        self, signature: inspect.Signature, doc_arg_types: OrderedDict[str, str], doc_returns_types: str | inspect._empty, short_class_name: str, is_classmethod: bool
+        self,
+        signature: inspect.Signature,
+        doc_arg_types: OrderedDict[str, str],
+        doc_returns_types: str | inspect._empty,
+        short_class_name: str,
+        is_classmethod: bool,
     ) -> str:
         def fix_hint(hint, class_name: str = short_class_name):
             if hint == class_name:
@@ -172,12 +208,13 @@ class ClassInfo:
 
 
 class SignatureImprover:
-    def __init__(self, file_path: str, module_name: str = 'quantum_info', verbose: bool = False):
+    def __init__(self, file_path: str, visitor: ImportVisitor, verbose: bool = False):
         file_path, _ = os.path.splitext(file_path)  # e.g. path/to/qiskit/quantum_info/states/statevector
         path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', 'qiskit', 'quantum_info', 'states', 'statevector']
         loc = path_elems.index('qiskit')
         self.module_name = '.'.join(path_elems[loc:])  # e.g. 'qiskit.quantum_info.states.statevector'
         self.mod = importlib.import_module(self.module_name)
+        self.visitor = visitor
         self.verbose = verbose
         self._classname2info: Dict[str, ClassInfo] = {}
 
@@ -310,7 +347,17 @@ def autohints(
             continue
 
         try:
-            signature_improver = SignatureImprover(file_path, verbose=verbose)
+            with open(file_path) as fin:
+                module = ast.parse(fin.read())
+
+            visitor = ImportVisitor()
+            visitor.visit(module)
+
+            if verbose:
+                print(visitor.modules)
+                print(visitor.name2info)
+
+            signature_improver = SignatureImprover(file_path, visitor, verbose=verbose)
             signature_improver.run()
 
             if verbose:
