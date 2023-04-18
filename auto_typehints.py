@@ -47,7 +47,8 @@ class ImportVisitor(ast.NodeVisitor):
 
 
 class ClassInfo:
-    def __init__(self, module_name: str, short_class_name: str, class_type, verbose: bool = False) -> Dict[str, str]:
+    def __init__(self, module_name: str, short_class_name: str, class_type, visitor: ImportVisitor, verbose: bool = False) -> Dict[str, str]:
+        self.visitor = visitor
         self.verbose = verbose
         self._methods2signatures = {}
         full_class_name = self.extract_class_name(str(class_type))
@@ -115,7 +116,7 @@ class ClassInfo:
         short_class_name: str,
         is_classmethod: bool,
     ) -> str:
-        def fix_hint(hint, class_name: str = short_class_name):
+        def fix_hint(hint, class_name: str = short_class_name, visitor: ImportVisitor = self.visitor):
             if hint is None:
                 return None
 
@@ -246,7 +247,7 @@ class SignatureImprover:
                 continue
             obj_name, obj_type = x
             if inspect.isclass(obj_type):
-                info = ClassInfo(self.module_name, obj_name, obj_type, self.verbose)
+                info = ClassInfo(self.module_name, obj_name, obj_type, self.visitor, self.verbose)
                 self._classname2info[obj_name] = info
 
 
