@@ -25,15 +25,15 @@ class AstClassInfo:
 
 class ImportVisitor(ast.NodeVisitor):
     def __init__(self):
-        self._modules = {}
-        self._name2info = {}
+        self._modules: Dict[str, str] = {}  # import numpy as np : numpy -> np
+        self._name2info: Dict[str, AstClassInfo] = {}
 
     @property
-    def modules(self):
+    def modules(self) -> Dict[str, str]:
         return self._modules
 
     @property
-    def name2info(self):
+    def name2info(self) -> Dict[str, AstClassInfo]:
         return self._name2info
 
     def visit_Import(self, node):
@@ -127,6 +127,22 @@ class ClassInfo:
                 elif h == 'string':
                     hint_parts.append('str')
                 else:
+                    parts = h.split('.')
+                    if len(parts) > 1:
+                        module, name = '.'.join(parts[:-1]), parts[-1]
+                        # override h if needed
+                        if module in visitor.modules:
+                            module = visitor.modules[module]
+                            h = '.'.join([module, name])
+                        elif name in visitor.name2info:
+                            info = visitor.name2info[name]
+                            mod = importlib.import_module(info.module)
+                            mod2 = importlib.import_module(module)
+                            if getattr(mod, name) == getattr(mod2, name):
+                                if info.alias is None:
+                                    h = name
+                                else:
+                                    h = info.alias
                     hint_parts.append(h)
             return ' | '.join(hint_parts)
 
