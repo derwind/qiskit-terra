@@ -155,10 +155,12 @@ class ClassInfo:
 
         new_signature_elems = []
         for name, hint in name2hint.items():
+            # assign type hint to given variable
             if hint is not None:
                 name_with_info = f'{name}: {hint}'
             else:
                 name_with_info = name
+            # assign default value to given variable
             if name2default[name] != inspect.Parameter.empty:
                 name_with_info += f' = {name2default[name]}'
             new_signature_elems.append(name_with_info)
