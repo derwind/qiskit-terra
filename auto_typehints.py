@@ -29,7 +29,11 @@ class ClassInfo:
                 member_name, insp_member = y
                 # normal method or bound method
                 if inspect.isfunction(insp_member) or inspect.ismethod(insp_member):
-                    method_name, signature = self._method_proc(short_class_name, member_name, insp_member)
+                    is_classmethod = False
+                    if member_name in class_type.__dict__:
+                        # https://stackoverflow.com/questions/19947151/how-to-distinguish-an-instance-method-a-class-method-a-static-method-or-a-func
+                        is_classmethod = isinstance(class_type.__dict__[member_name], classmethod)
+                    method_name, signature = self._method_proc(short_class_name, member_name, insp_member, is_classmethod)
                     if method_name is not None:
                         self._methods2signatures[method_name] = signature
 
@@ -37,7 +41,7 @@ class ClassInfo:
     def methods2signatures(self):
         return self._methods2signatures
 
-    def _method_proc(self, short_class_name: str, short_method_name: str, insp_method) -> Tuple[str, str] | Tuple[None, None]:
+    def _method_proc(self, short_class_name: str, short_method_name: str, insp_method, is_classmethod: bool) -> Tuple[str, str] | Tuple[None, None]:
         if inspect.isfunction(insp_method):
             full_method_name = str(insp_method).split(' ')[1]
         elif inspect.ismethod(insp_method):
@@ -65,7 +69,7 @@ class ClassInfo:
             ok = returns_types and returns_types.args[-1] not in self.ignore_cases
             print('[DOCSTRING]', arg_types, '->', returns_types.args[-1] if ok else '')
 
-        new_signature = self._supplement_signature(signature, arg_types, returns_types, short_class_name)
+        new_signature = self._supplement_signature(signature, arg_types, returns_types, short_class_name, is_classmethod)
         if self.verbose:
             print(f'[Signature] {short_method_name}{new_signature}')
             print()
@@ -73,7 +77,7 @@ class ClassInfo:
         return short_method_name, new_signature
 
     def _supplement_signature(
-        self, signature: inspect.Signature, doc_arg_types: OrderedDict[str, str], doc_returns_types: str | inspect._empty, short_class_name: str
+        self, signature: inspect.Signature, doc_arg_types: OrderedDict[str, str], doc_returns_types: str | inspect._empty, short_class_name: str, is_classmethod: bool
     ) -> str:
         def fix_hint(hint, class_name: str = short_class_name):
             if hint == class_name:
@@ -85,6 +89,11 @@ class ClassInfo:
 
         name2hint = OrderedDict()  # key: qualified_name
         name2default = OrderedDict()  # key: qualified_name
+
+        if is_classmethod:
+            # For some reason, in the class method case, 'cls' is omitted in the 'signature', so I add it.
+            name2hint['cls'] = None
+            name2default['cls'] = inspect.Parameter.empty
 
         for name, detail in signature.parameters.items():
             # e.g., '**kwargs'
@@ -314,7 +323,7 @@ def autohints(
             signature_replacer = SignatureReplacer(file_path, signature_improver, suffix=suffix, inplace=inplace)
             signature_replacer.run()
         except Exception as e:
-            print(file_path, e, file=sys.stderr)
+            print('[[Exception]]', file_path, e, file=sys.stderr)
 
 
 def parse_opt():
