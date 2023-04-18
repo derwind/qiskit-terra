@@ -154,6 +154,7 @@ class ClassInfo:
                 name2default[qualified_name] = detail.default
 
         new_signature_elems = []
+        # arguments of methods
         for name, hint in name2hint.items():
             # assign type hint to given variable
             if hint is not None:
@@ -166,8 +167,10 @@ class ClassInfo:
             new_signature_elems.append(name_with_info)
         new_signature = '(' + ', '.join(new_signature_elems) + ')'
 
+        # returns of methods
         if signature.return_annotation != inspect.Parameter.empty:  # from type hint
-            new_signature += f' -> {fix_hint(self.extract_class_name(str(signature.return_annotation)))}'
+            return_type = fix_hint(self.extract_class_name(str(signature.return_annotation)))
+            new_signature += f' -> {return_type}'
         else:
             if doc_returns_types:  # from docstring
                 if isinstance(doc_returns_types, docstring_parser.common.DocstringReturns):
@@ -177,8 +180,8 @@ class ClassInfo:
                     full_class_name = self.extract_class_name(str(doc_returns_types))
                     new_signature += f' -> {fix_hint(full_class_name)}'
                 else:
-                    print(doc_returns_types)
-                    new_signature += f' -> {fix_hint(str(doc_returns_types))}'
+                    return_type = fix_hint(str(doc_returns_types))
+                    new_signature += f' -> {return_type}'
 
         return new_signature
 
