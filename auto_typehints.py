@@ -134,11 +134,23 @@ class ClassInfo:
                         if module in visitor.modules:
                             module = visitor.modules[module]
                             h = '.'.join([module, name])
+                        elif 'qiskit.' + module in visitor.modules:
+                            module = visitor.modules['qiskit.' + module]
+                            h = '.'.join([module, name])
                         elif name in visitor.name2info:
                             info = visitor.name2info[name]
                             mod = importlib.import_module(info.module)
                             mod2 = importlib.import_module(module)
-                            if getattr(mod, name) == getattr(mod2, name):
+                            try:
+                                mod3 = importlib.import_module('qiskit.' + module)
+                            except:
+                                mod3 = None
+                            if mod3 is not None and getattr(mod, name) == getattr(mod3, name):
+                                if info.alias is None:
+                                    h = name
+                                else:
+                                    h = info.alias
+                            elif getattr(mod, name) == getattr(mod2, name):
                                 if info.alias is None:
                                     h = name
                                 else:
