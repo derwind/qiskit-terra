@@ -130,11 +130,13 @@ class ClassInfo:
                     parts = h.split('.')
                     if len(parts) > 1:
                         module, name = '.'.join(parts[:-1]), parts[-1]
+                        # omit needless decorations
+                        module = module.replace('~', '')
                         # override h if needed
                         if module in visitor.modules:
                             module = visitor.modules[module]
                             h = '.'.join([module, name])
-                        elif 'qiskit.' + module in visitor.modules:
+                        elif module.find('qiskit.') < 0 and 'qiskit.' + module in visitor.modules:
                             module = visitor.modules['qiskit.' + module]
                             h = '.'.join([module, name])
                         elif name in visitor.name2info:
