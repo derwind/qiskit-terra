@@ -7,6 +7,7 @@ import importlib
 import inspect
 import ast
 from dataclasses import dataclass
+from functools import cmp_to_key
 import docstring_parser
 from collections import OrderedDict
 from typing import Dict, Tuple
@@ -16,6 +17,41 @@ if sys.version_info.major < 3 or sys.version_info.minor < 10:
     info = sys.version_info
     raise NotImplementedError(f'Python {info.major}.{info.minor}.{info.micro} is not supported')
 
+def make_class2modulepaths(module_root: str, suffix: str = None):
+    def name_dist(a: str, b: str):
+        if a in b:
+            return -b.replace(a, '').count('.')
+        elif b in a:
+            return a.replace(b, '').count('.')
+        else:
+            return 0
+
+    class2modules = {}
+
+    for file_path in glob.glob(os.path.join(module_root, '**/*.py'), recursive=True):
+        if suffix is not None and file_path.endswith(f'{suffix}.py'):
+            continue
+        relative_path = os.path.relpath(file_path, module_root)
+        dirname = os.path.dirname(relative_path)
+        basename, _ = os.path.splitext(os.path.basename(file_path))
+        if basename == '__init__':
+            module_path = re.sub(rf'{os.sep}$', '', os.path.join(module_root, dirname)).replace(os.sep, '.')
+        else:
+            module_path = os.path.join(module_root, dirname, basename).replace(os.sep, '.')
+
+        mod = importlib.import_module(module_path)
+        classes = list(map(lambda x:(x[0], x[1].__module__), inspect.getmembers(mod, inspect.isclass)))
+        if not classes:
+            continue
+        for cls in classes:
+            class2modules.setdefault(cls[0], {'def': cls[1], 'paths': []})
+            class2modules[cls[0]]['paths'].append(module_path)
+
+    for cls, modules in sorted(class2modules.items()):
+        modules['paths'] = sorted(modules['paths'], key=cmp_to_key(name_dist))
+
+    return class2modules
+
 
 @dataclass(eq=False)
 class AstClassInfo:
@@ -24,7 +60,7 @@ class AstClassInfo:
 
 
 class ImportVisitor(ast.NodeVisitor):
-    '''Visitor that collects class info from import statements'''
+    """Visitor that collects class info from import statements"""
 
     def __init__(self):
         self._modules: Dict[str, str] = {}  # import numpy as np : numpy -> np
@@ -49,7 +85,7 @@ class ImportVisitor(ast.NodeVisitor):
 
 
 class ClassInfo:
-    '''manage info of classes such as signatures of methods belonging to them'''
+    """manage info of classes such as signatures of methods belonging to them"""
 
     def __init__(self, module_name: str, short_class_name: str, class_type, visitor: ImportVisitor, verbose: bool = False) -> Dict[str, str]:
         self.visitor = visitor
@@ -254,6 +290,8 @@ class ClassInfo:
 
 
 class SignatureImprover:
+    """Construct a new signature for the method"""
+
     def __init__(self, file_path: str, visitor: ImportVisitor, verbose: bool = False):
         file_path, _ = os.path.splitext(file_path)  # e.g. path/to/qiskit/quantum_info/states/statevector
         path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', 'qiskit', 'quantum_info', 'states', 'statevector']
@@ -289,7 +327,7 @@ class SignatureReplacer:
     """Update signatures of the methods in the given file and output the updated file.
 
     Args:
-        file_path (str): /path/to/file
+        file_path (str): /path/to/file which is same as what was passed to `SignatureImprover`
         signature_improver (SignatureImprover): SignatureImprover instance which has already run
         suffix (str | None): suffix of file or stdout
     """
@@ -313,6 +351,7 @@ class SignatureReplacer:
             out_file_path = os.path.join(dirname, f'{basename}{self.suffix}{ext}')
             fout = open(out_file_path, 'w')
 
+        # heuristically parse a file by regexp and replace signatures
         with open(self.file_path) as fin:
             class_name = None
             method_name = None
@@ -386,6 +425,10 @@ def autohints(
     sys.path.append(qiskit_root)
     sys.path.append(module_root)
 
+    # First, collect 'class to module' info
+    class2modules = make_class2modulepaths(module_root, suffix)
+
+    # Second, improve signature
     for file_path in glob.glob(os.path.join(module_root, '**/*.py'), recursive=True):
         if suffix is not None and file_path.endswith(f'{suffix}.py'):
             continue
