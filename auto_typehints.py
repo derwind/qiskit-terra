@@ -24,6 +24,8 @@ class AstClassInfo:
 
 
 class ImportVisitor(ast.NodeVisitor):
+    '''Visitor that collects class info from import statements'''
+
     def __init__(self):
         self._modules: Dict[str, str] = {}  # import numpy as np : numpy -> np
         self._name2info: Dict[str, AstClassInfo] = {}
@@ -47,6 +49,8 @@ class ImportVisitor(ast.NodeVisitor):
 
 
 class ClassInfo:
+    '''manage info of classes such as signatures of methods belonging to them'''
+
     def __init__(self, module_name: str, short_class_name: str, class_type, visitor: ImportVisitor, verbose: bool = False) -> Dict[str, str]:
         self.visitor = visitor
         self.verbose = verbose
