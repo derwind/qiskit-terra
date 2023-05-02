@@ -10,14 +10,20 @@ from dataclasses import dataclass
 from functools import cmp_to_key
 import docstring_parser
 from collections import OrderedDict
-from typing import Dict, Tuple
+from typing import List, Dict, Tuple, TypedDict
 
 
 if sys.version_info.major < 3 or sys.version_info.minor < 10:
     info = sys.version_info
     raise NotImplementedError(f'Python {info.major}.{info.minor}.{info.micro} is not supported')
 
-def make_class2modulepaths(module_root: str, suffix: str = None):
+
+class ModuleInfo(TypedDict):
+    definition: str
+    module_names: List[str]
+
+
+def make_class2modules(module_root: str, suffix: str = None) -> Dict[str, ModuleInfo]:
     def name_dist(a: str, b: str):
         if a in b:
             return -b.replace(a, '').count('.')
@@ -40,11 +46,11 @@ def make_class2modulepaths(module_root: str, suffix: str = None):
             module_path = os.path.join(module_root, dirname, basename).replace(os.sep, '.')
 
         mod = importlib.import_module(module_path)
-        classes = list(map(lambda x:(x[0], x[1].__module__), inspect.getmembers(mod, inspect.isclass)))
+        classes = list(map(lambda x: (x[0], x[1].__module__), inspect.getmembers(mod, inspect.isclass)))
         if not classes:
             continue
         for cls in classes:
-            class2modules.setdefault(cls[0], {'def': cls[1], 'module_names': []})
+            class2modules.setdefault(cls[0], {'definition': cls[1], 'module_names': []})
             class2modules[cls[0]]['module_names'].append(module_path)
 
     for cls, modules in sorted(class2modules.items()):
@@ -87,8 +93,19 @@ class ImportVisitor(ast.NodeVisitor):
 class ClassInfo:
     """inspect given class and manage info of class such as signatures of methods belonging to it"""
 
-    def __init__(self, module_name: str, short_class_name: str, class_type: object, visitor: ImportVisitor, known_class2modules: Dict[str, dict], verbose: bool = False) -> Dict[str, str]:
+    def __init__(
+        self,
+        module_name: str,
+        short_class_name: str,
+        class_type: object,
+        visitor: ImportVisitor,
+        global_class2modules: Dict[str, ModuleInfo],
+        local_class2modules: Dict[str, ModuleInfo],
+        verbose: bool = False,
+    ) -> Dict[str, str]:
         self.visitor = visitor
+        self.global_class2modules = global_class2modules
+        self.local_class2modules = local_class2modules
         self.verbose = verbose
         self._methods2signatures = {}
         full_class_name = self.extract_class_name(str(class_type))
@@ -136,11 +153,14 @@ class ClassInfo:
             return None, None
         # construct a new signature from docstring
         arg_types: OrderedDict = OrderedDict({arg.arg_name: arg.type_name for arg in docstring.params})
+        arg_types = self.recover_type_infos(arg_types)
         arg_types = self.modernize_type_infos(arg_types)
         returns_types: docstring_parser.common.DocstringReturns | None = docstring.returns
+        valid_returns_types = returns_types and returns_types.args[-1] not in self.ignore_cases
         if self.verbose:
-            ok = returns_types and returns_types.args[-1] not in self.ignore_cases
-            print('[DOCSTRING]', arg_types, '->', returns_types.args[-1] if ok else '')
+            print('[DOCSTRING]', arg_types, '->', returns_types.args[-1] if valid_returns_types else '')
+
+        self._detect_unresolved_symbols(list(arg_types.values()), returns_types.args[-1] if valid_returns_types else None)
 
         new_signature = self._supplement_signature(signature, arg_types, returns_types, short_class_name, is_classmethod)
         if self.verbose:
@@ -263,6 +283,20 @@ class ClassInfo:
 
         return new_signature
 
+    def _detect_unresolved_symbols(self, arg_types: List[str], returns_types: str | None = None):
+        """detect symbols which are globally known but are not locally known"""
+
+        types = set()
+        for typ in arg_types:
+            if typ is not None:
+                types = types | {t for t in re.split(r'\s*\|\s*', typ) if t != 'None'}
+        if returns_types is not None:
+            types = types | {t for t in re.split(r'\s*\|\s*', returns_types) if t != 'None'}
+
+        if self.verbose:
+            print('[_detect_unresolved_symbols]')
+            print(types)
+
     @staticmethod
     def extract_class_name(class_xxx: str):
         if m := re.search(r"'(\S+)'", class_xxx):
@@ -279,8 +313,23 @@ class ClassInfo:
         return method_name.split('.')[0] == class_name
 
     @classmethod
+    def recover_type_infos(cls, arg_types: Dict[str, str]) -> Dict[str, str]:
+        """recover broken type infos because of line feeds"""
+        new_arg_types = {}
+        for k, v in arg_types.items():
+            if v is None and '\n' in k:
+                # broken
+                k = re.sub(r'\s*'+'\n'+r'\s*', ' ', k)
+                if m := re.match(r'(\S+)\s*\((.*)\)', k):
+                    k = m.group(1)
+                    v = m.group(2)
+            new_arg_types[k] = v
+
+        return new_arg_types
+
+    @classmethod
     def modernize_type_infos(cls, arg_types: Dict[str, str]) -> Dict[str, str]:
-        """ modernize type infos, e.g. Optional[str] ---> str | None
+        """modernize type infos, e.g. Optional[str] ---> str | None
 
         Args:
             arg_types (Dict[str, str]): key: argument name, value: type hint of the argument
@@ -302,13 +351,14 @@ class ClassInfo:
 class SignatureImprover:
     """Construct a new signature for the method"""
 
-    def __init__(self, file_path: str, visitor: ImportVisitor, verbose: bool = False):
+    def __init__(self, file_path: str, visitor: ImportVisitor, class2modules: Dict[str, ModuleInfo], verbose: bool = False):
         file_path, _ = os.path.splitext(file_path)  # e.g. path/to/qiskit/quantum_info/states/statevector
         path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', 'qiskit', 'quantum_info', 'states', 'statevector']
         loc = path_elems.index('qiskit')
         self.module_name = '.'.join(path_elems[loc:])  # e.g. 'qiskit.quantum_info.states.statevector'
         self.mod = importlib.import_module(self.module_name)
         self.visitor = visitor
+        self.global_class2modules = class2modules
         self.verbose = verbose
         self._classname2info: Dict[str, ClassInfo] = {}
 
@@ -325,11 +375,11 @@ class SignatureImprover:
     def run(self) -> None:
         """Construct a new signature for the method after constructing the type hint from docstring and return it as a dictionary from the method name."""
 
-        known_classes = list(map(lambda x:(x[0], x[1].__module__), inspect.getmembers(self.mod, inspect.isclass)))
-        known_class2modules = {}
-        for cls in known_classes:
-            known_class2modules.setdefault(cls[0], {'def': cls[1], 'module_names': []})
-            known_class2modules[cls[0]]['module_names'].append(self.module_name)
+        local_classes = list(map(lambda x: (x[0], x[1].__module__), inspect.getmembers(self.mod, inspect.isclass)))
+        local_class2modules = {}
+        for cls in local_classes:
+            local_class2modules.setdefault(cls[0], {'definition': cls[1], 'module_names': []})
+            local_class2modules[cls[0]]['module_names'].append(self.module_name)
 
         for x in inspect.getmembers(self.mod):
             if not isinstance(x, tuple):
@@ -337,7 +387,7 @@ class SignatureImprover:
             obj_name, obj_type = x
             # proc for each class in the module
             if inspect.isclass(obj_type):
-                info = ClassInfo(self.module_name, obj_name, obj_type, self.visitor, known_class2modules, self.verbose)
+                info = ClassInfo(self.module_name, obj_name, obj_type, self.visitor, self.global_class2modules, local_class2modules, self.verbose)
                 self._classname2info[obj_name] = info
 
 
@@ -444,7 +494,7 @@ def autohints(
     sys.path.append(module_root)
 
     # First, collect 'class to module' info
-    class2modules = make_class2modulepaths(module_root, suffix)
+    class2modules = make_class2modules(module_root, suffix)
 
     # Second, improve signature
     for file_path in glob.glob(os.path.join(module_root, '**/*.py'), recursive=True):
@@ -466,7 +516,7 @@ def autohints(
                 print(visitor.name2info)
                 print('#--------------------------')
 
-            signature_improver = SignatureImprover(file_path, visitor, verbose=verbose)
+            signature_improver = SignatureImprover(file_path, visitor, class2modules, verbose=verbose)
             signature_improver.run()
 
             if verbose:
