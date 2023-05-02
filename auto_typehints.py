@@ -44,11 +44,11 @@ def make_class2modulepaths(module_root: str, suffix: str = None):
         if not classes:
             continue
         for cls in classes:
-            class2modules.setdefault(cls[0], {'def': cls[1], 'paths': []})
-            class2modules[cls[0]]['paths'].append(module_path)
+            class2modules.setdefault(cls[0], {'def': cls[1], 'module_names': []})
+            class2modules[cls[0]]['module_names'].append(module_path)
 
     for cls, modules in sorted(class2modules.items()):
-        modules['paths'] = sorted(modules['paths'], key=cmp_to_key(name_dist))
+        modules['module_names'] = sorted(modules['module_names'], key=cmp_to_key(name_dist))
 
     return class2modules
 
@@ -85,9 +85,9 @@ class ImportVisitor(ast.NodeVisitor):
 
 
 class ClassInfo:
-    """manage info of classes such as signatures of methods belonging to them"""
+    """inspect given class and manage info of class such as signatures of methods belonging to it"""
 
-    def __init__(self, module_name: str, short_class_name: str, class_type, visitor: ImportVisitor, verbose: bool = False) -> Dict[str, str]:
+    def __init__(self, module_name: str, short_class_name: str, class_type: object, visitor: ImportVisitor, known_class2modules: Dict[str, dict], verbose: bool = False) -> Dict[str, str]:
         self.visitor = visitor
         self.verbose = verbose
         self._methods2signatures = {}
@@ -134,9 +134,10 @@ class ClassInfo:
             docstring = docstring_parser.google.parse(inspect.getdoc(insp_method))
         except:
             return None, None
-        arg_types = OrderedDict({arg.arg_name: arg.type_name for arg in docstring.params})
-        returns_types = docstring.returns
+        # construct a new signature from docstring
+        arg_types: OrderedDict = OrderedDict({arg.arg_name: arg.type_name for arg in docstring.params})
         arg_types = self.modernize_type_infos(arg_types)
+        returns_types: docstring_parser.common.DocstringReturns | None = docstring.returns
         if self.verbose:
             ok = returns_types and returns_types.args[-1] not in self.ignore_cases
             print('[DOCSTRING]', arg_types, '->', returns_types.args[-1] if ok else '')
@@ -279,6 +280,15 @@ class ClassInfo:
 
     @classmethod
     def modernize_type_infos(cls, arg_types: Dict[str, str]) -> Dict[str, str]:
+        """ modernize type infos, e.g. Optional[str] ---> str | None
+
+        Args:
+            arg_types (Dict[str, str]): key: argument name, value: type hint of the argument
+
+        Returns
+            Dict[str, str]: dict consisting of argument names and modernized type hints
+        """
+
         def improve_hints(types: str | None):
             if types is None or types in cls.ignore_cases:
                 return None
@@ -314,12 +324,20 @@ class SignatureImprover:
 
     def run(self) -> None:
         """Construct a new signature for the method after constructing the type hint from docstring and return it as a dictionary from the method name."""
+
+        known_classes = list(map(lambda x:(x[0], x[1].__module__), inspect.getmembers(self.mod, inspect.isclass)))
+        known_class2modules = {}
+        for cls in known_classes:
+            known_class2modules.setdefault(cls[0], {'def': cls[1], 'module_names': []})
+            known_class2modules[cls[0]]['module_names'].append(self.module_name)
+
         for x in inspect.getmembers(self.mod):
             if not isinstance(x, tuple):
                 continue
             obj_name, obj_type = x
+            # proc for each class in the module
             if inspect.isclass(obj_type):
-                info = ClassInfo(self.module_name, obj_name, obj_type, self.visitor, self.verbose)
+                info = ClassInfo(self.module_name, obj_name, obj_type, self.visitor, known_class2modules, self.verbose)
                 self._classname2info[obj_name] = info
 
 
@@ -443,8 +461,10 @@ def autohints(
             visitor.visit(module)
 
             if verbose:
+                print('#--- ImportVisitor logs ---')
                 print(visitor.modules)
                 print(visitor.name2info)
+                print('#--------------------------')
 
             signature_improver = SignatureImprover(file_path, visitor, verbose=verbose)
             signature_improver.run()
