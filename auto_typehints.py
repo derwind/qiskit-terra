@@ -281,7 +281,10 @@ class ClassInfo:
                     hint = doc_arg_types[name]
                 name2hint[qualified_name] = fix_hint(hint)
             else:
-                name2hint[qualified_name] = fix_hint(str(detail.annotation.__qualname__))
+                annotation = detail.annotation
+                if hasattr(annotation, '__qualname__'):
+                    annotation = annotation.__qualname__
+                name2hint[qualified_name] = fix_hint(str(annotation))
             # no default value
             if detail.default == inspect.Parameter.empty:
                 name2default[qualified_name] = inspect.Parameter.empty
@@ -525,7 +528,7 @@ class SignatureReplacer:
                     continue
 
                 # start of class definition
-                if m := re.search(r'^class\s+(\S+)\s*[:\(]', line):
+                if m := re.search(r'^class\s+(\S+?)\s*[:\(]', line):
                     class_name = m.group(1)
                     print(line, file=fout)
                     continue
