@@ -303,9 +303,11 @@ class ClassInfo:
                 missing_candidates.add(typ)
 
         if self.verbose:
-            print('[missing candidates]')
-            print(missing_candidates)
-            raise
+            if missing_candidates:
+                print('[missing candidates]')
+                for symbol in missing_candidates:
+                    print('*', symbol, ':', self.global_class2modules[symbol]['definition'])
+                raise Exception('some missing_candidates found')
 
     @staticmethod
     def extract_class_name(class_xxx: str):
