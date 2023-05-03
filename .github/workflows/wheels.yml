@@ -1,9 +1,7 @@
 ---
 name: Wheel Builds
 on:
-  push:
-    tags:
-      - '*'
+  workflow_dispatch:
 jobs:
   build_wheels_s390x:
     name: Build wheels on s390x

@@ -1,7 +1,5 @@
 name: Randomized tests
 on:
-  schedule:
-    - cron:  '42 3 * * *'
   workflow_dispatch:
 jobs:
   randomized_tests:
