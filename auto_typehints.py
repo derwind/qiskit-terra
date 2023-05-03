@@ -240,6 +240,8 @@ class ClassInfo:
                         module = module.replace('~', '')
                         # override h if needed
                         if module in visitor.modules:
+                            # e.g. numpy complex128
+                            # e.g. rustworkx PyGraph
                             module = visitor.modules[module]
                             h = '.'.join([module, name])
                         elif module.find('qiskit.') < 0 and 'qiskit.' + module in visitor.modules:
