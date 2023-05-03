@@ -49,6 +49,11 @@ def import_modules(module_name: str, qiskit_root: str, only_filename: List[str] 
         print('[Summary for failed files]')
         for file_path in failed_files:
             print(file_path)
+    else:
+        if verbose:
+            print('-' * 50)
+            print('[Summary]')
+            print('No error!')
 
 
 def parse_opt():
