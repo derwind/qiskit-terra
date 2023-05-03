@@ -17,6 +17,8 @@ if sys.version_info.major < 3 or sys.version_info.minor < 10:
     info = sys.version_info
     raise NotImplementedError(f'Python {info.major}.{info.minor}.{info.micro} is not supported')
 
+MISSING_SYMBOLS_FILE = 'missing_candidates.txt'
+
 
 class ModuleInfo(TypedDict):
     definition: str
@@ -110,6 +112,7 @@ class ClassInfo:
         self.detect_missing_symbols = detect_missing_symbols
         self.verbose = verbose
         self._methods2signatures = {}
+        self._missing_symbols = {}
         full_class_name = self.extract_class_name(str(class_type))
         if self.isclass_in_file(full_class_name, module_name):
             # sig = inspect.signature(class_type)
@@ -129,8 +132,12 @@ class ClassInfo:
                         self._methods2signatures[method_name] = signature
 
     @property
-    def methods2signatures(self):
+    def methods2signatures(self) -> Dict[str, str]:
         return self._methods2signatures
+
+    @property
+    def missing_symbols(self) -> Dict[str, List[str]]:
+        return self._missing_symbols
 
     def _method_proc(self, short_class_name: str, short_method_name: str, insp_method, is_classmethod: bool) -> Tuple[str, str] | Tuple[None, None]:
         if inspect.isfunction(insp_method):
@@ -165,14 +172,29 @@ class ClassInfo:
         if self.detect_missing_symbols:
             missing_candidates = self._detect_missing_symbols(list(arg_types.values()), returns_types.args[-1] if valid_returns_types else None)
             if missing_candidates:
-                log_file_path = 'missing_candidates.txt'
+                log_file_path = MISSING_SYMBOLS_FILE
                 mode = 'a' if os.path.isfile(log_file_path) else 'w'
                 with open(log_file_path, mode) as fout:
                     print(f'[[{short_class_name}]]', file=fout)
                     print(f'[{short_method_name}]', file=fout)
                     for symbol in missing_candidates:
-                        print('*', symbol, ':', self.global_class2modules[symbol]['definition'], file=fout)
-                    print(f'-', *50, file=fout)
+                        definition = self.global_class2modules[symbol]['definition']
+                        second_candidate = ''
+                        shorter_modules = set()
+                        for candidates in self.global_class2modules[symbol]['module_names']:
+                            if candidates in definition and len(candidates) < len(definition):
+                                shorter_modules.add(candidates)
+                            if shorter_modules:
+                                second_candidate = sorted(shorter_modules)[0]
+                        print('*', symbol, ':', definition, f'({second_candidate})', file=fout)
+
+                        #from_module = second_candidate if second_candidate else definition
+
+                        # memory info for later use
+                        self._missing_symbols.setdefault(definition, [])
+                        self._missing_symbols[definition].append(symbol)
+
+                    print(f'-' * 50, file=fout)
 
         new_signature = self._supplement_signature(signature, arg_types, returns_types, short_class_name, is_classmethod)
         if self.verbose:
@@ -400,11 +422,23 @@ class SignatureImprover:
         self.global_class2modules = class2modules
         self.detect_missing_symbols = detect_missing_symbols
         self.verbose = verbose
-        self._classname2info: Dict[str, ClassInfo] = {}
+        self._classname2info: Dict[str, ClassInfo] = {}  # key: class name, value: class info
 
     @property
     def class_names(self):
         return self._classname2info.keys()
+
+    @property
+    def missing_symbols(self) -> Dict[str, List[str]]:
+        symbols = {}
+        for info in self._classname2info.values():
+            for from_, modules in info.missing_symbols.items():
+                symbols.setdefault(from_, set())
+                symbols[from_] |= set(modules)
+        for from_, modules in symbols.items():
+            symbols[from_] = sorted(modules)
+
+        return symbols
 
     def methods2signatures(self, class_name: str):
         if class_name in self._classname2info:
@@ -473,9 +507,11 @@ class SignatureReplacer:
             class_name = None
             method_name = None
             new_method_decl = None
-            for line in fin.readlines():
-                line = line.rstrip()
 
+            lines = [line.rstrip() for line in fin.readlines()]
+            last_import_line_no_line_no = self._calc_last_import_line_no(lines)
+
+            for line_no, line in enumerate(lines):
                 # end of class definition
                 if class_name is not None and re.search(r'^\S', line):
                     class_name = None
@@ -488,12 +524,21 @@ class SignatureReplacer:
                     method_name = None
                     continue
 
+                # start of class definition
                 if m := re.search(r'^class\s+(\S+)\s*[:\(]', line):
                     class_name = m.group(1)
                     print(line, file=fout)
                     continue
 
-                if class_name is not None:
+                if class_name is None:
+                    print(line, file=fout)
+
+                    if line_no == last_import_line_no_line_no:
+                        # dump missing import
+                        for from_, modules in self.signature_improver.missing_symbols.items():
+                            print(f"from {from_} import {', '.join(modules)}", file=fout)
+                else:
+                    # start of method signature
                     if m := re.search(r'^\s+def\s+(\S+)\s*\(', line):
                         method_name = m.group(1)
                         if method_name in self.signature_improver.methods2signatures(class_name):
@@ -512,8 +557,6 @@ class SignatureReplacer:
                     else:
                         if method_name is None:
                             print(line, file=fout)
-                else:
-                    print(line, file=fout)
 
         if fout != sys.stdout:
             fout.close()
@@ -522,6 +565,22 @@ class SignatureReplacer:
             import shutil
 
             shutil.move(out_file_path, self.file_path)
+
+    def _calc_last_import_line_no(self, lines: List[str]) -> int | None:
+        for line_no in range(len(lines) - 1, -1, -1):
+            line = lines[line_no]
+            if m := re.search(r'^import', line):
+                return line_no
+            elif m := re.search(r'^from', line):
+                if '(' not in line:
+                    return line_no
+                for lno in range(line_no, len(lines) - 1):
+                    if ')' in lines[lno]:
+                        return lno
+                # something odd...
+                return None
+
+        return None
 
 
 def autohints(
@@ -533,6 +592,9 @@ def autohints(
     detect_missing_symbols: bool = False,
     verbose: bool = False,
 ):
+    if os.path.isfile(MISSING_SYMBOLS_FILE):
+        os.remove(MISSING_SYMBOLS_FILE)
+
     module_root = None
     for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
         if os.path.isdir(file_path):
