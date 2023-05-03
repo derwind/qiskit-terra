@@ -259,7 +259,10 @@ class ClassInfo:
                 if detail.default is None and name2hint[qualified_name] is not None:
                     if 'Optional' not in name2hint[qualified_name] and 'None' not in name2hint[qualified_name]:
                         name2hint[qualified_name] += ' | None'
-                name2default[qualified_name] = detail.default
+                default_value = detail.default
+                if isinstance(detail.default, str):
+                    default_value = f'"{default_value}"'
+                name2default[qualified_name] = default_value
 
         new_signature_elems = []
         # arguments of methods
