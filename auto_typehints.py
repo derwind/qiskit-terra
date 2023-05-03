@@ -619,29 +619,48 @@ class SignatureReplacer:
         return None
 
 
+def retrieve_directory_path(module_name: str, qiskit_root: str) -> str:
+    for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
+        if os.path.isdir(file_path):
+            if file_path[-1] == os.sep:
+                file_path = file_path[:-1]
+            if file_path.split(os.sep)[-1] == module_name:
+                return file_path
+
+    return None
+
+
+def path_contains_any(path: str, candidates: List[str]) -> bool:
+    for candidate in candidates:
+        if candidate in path:
+            return True
+    return False
+
+
 def autohints(
     module_name: str,
     qiskit_root: str,
     suffix: str | None = None,
     inplace: bool = False,
     only_filename: List[str] | None = None,
+    only_dirname: List[str] | None = None,
     detect_missing_symbols: bool = False,
     verbose: bool = False,
 ):
     if os.path.isfile(MISSING_SYMBOLS_FILE):
         os.remove(MISSING_SYMBOLS_FILE)
 
-    module_root = None
-    for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
-        if os.path.isdir(file_path):
-            if file_path[-1] == os.sep:
-                file_path = file_path[:-1]
-            if file_path.split(os.sep)[-1] == module_name:
-                module_root = file_path
-                break
+    module_root = retrieve_directory_path(module_name, qiskit_root)
 
     if module_root is None:
         raise ModuleNotFoundError(f"'{module_name}' is not found")
+
+    retrieved_only_dirname = []
+    for dname in only_dirname:
+        path = retrieve_directory_path(dname, qiskit_root)
+        if path is None:
+            raise ModuleNotFoundError(f"'{dname}' is not found")
+        retrieved_only_dirname.append(path)
 
     sys.path.append(qiskit_root)
     sys.path.append(module_root)
@@ -654,6 +673,8 @@ def autohints(
         if suffix is not None and file_path.endswith(f'{suffix}.py'):
             continue
         if only_filename and os.path.basename(file_path) not in only_filename:
+            continue
+        if retrieved_only_dirname and not path_contains_any(os.path.dirname(file_path), retrieved_only_dirname):
             continue
 
         # try:
@@ -692,7 +713,9 @@ def parse_opt():
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--suffix', dest='suffix', type=str, default=None, help='suffix of file')
     group.add_argument('--inplace', action='store_true', help='in-place replacement?')
-    parser.add_argument('--only', dest='only_filename', nargs='*', type=str, default=[], help='file name')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--only', dest='only_filename', nargs='*', type=str, default=[], help='file name')
+    group.add_argument('--only-dir', dest='only_dirname', nargs='*', type=str, default=[], help='directory name')
     parser.add_argument('--detect-missing-symbols', dest='detect_missing_symbols', action='store_true', help='detect missing symbols?')
     parser.add_argument('--verbose', action='store_true', help='output logs?')
     parser.add_argument('module_name', type=str, help="module_name such as 'quantum_info'")
@@ -704,7 +727,16 @@ def parse_opt():
 
 def main():
     args = parse_opt()
-    autohints(args.module_name, args.qiskit_root, args.suffix, args.inplace, args.only_filename, args.detect_missing_symbols, args.verbose)
+    autohints(
+        args.module_name,
+        args.qiskit_root,
+        args.suffix,
+        args.inplace,
+        args.only_filename,
+        args.only_dirname,
+        args.detect_missing_symbols,
+        args.verbose,
+    )
 
 
 if __name__ == '__main__':
