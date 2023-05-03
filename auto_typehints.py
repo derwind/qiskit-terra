@@ -475,7 +475,7 @@ class SignatureReplacer:
                     method_name = None
                     continue
 
-                if m := re.search(r'^class\s+(\S+)\s*\(', line):
+                if m := re.search(r'^class\s+(\S+)\s*[:\(]', line):
                     class_name = m.group(1)
                     print(line, file=fout)
                     continue
