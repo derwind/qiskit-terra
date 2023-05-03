@@ -269,6 +269,30 @@ class ClassInfo:
                     hint_parts.append(h)
             return ' | '.join(hint_parts)
 
+        @dataclass
+        class DummyDetail:
+            name: str
+            annotation = inspect.Parameter.empty
+            default = inspect.Parameter.empty
+
+            def __str__(self) -> str:
+                return self.name
+
+        def supplement_signature_parameters(signature) -> dict:
+            """signature may have '*', so take care of such cases"""
+
+            signature_parameters = OrderedDict()
+
+            signature_str = str(signature)
+            signature_str = re.split(r'\s*->\*', signature_str)[0]
+            signature_str = signature_str.replace('(', '').replace(')', '')
+            signature_list = re.split(r'\s*,\s*', signature_str)
+            signature_list = [re.split(r'\s*:\s*', parameter)[0] for parameter in signature_list]
+            for key in signature_list:
+                signature_parameters[key] = signature.parameters[key] if key in signature.parameters else DummyDetail(key)
+
+            return signature_parameters
+
         name2hint = OrderedDict()  # key: qualified_name
         name2default = OrderedDict()  # key: qualified_name
 
@@ -277,7 +301,9 @@ class ClassInfo:
             name2hint['cls'] = None
             name2default['cls'] = inspect.Parameter.empty
 
-        for name, detail in signature.parameters.items():
+        signature_parameters = supplement_signature_parameters(signature)
+
+        for name, detail in signature_parameters.items():
             # e.g., '**kwargs'
             qualified_name = re.split(r'\s*:\s*', re.split(r'\s*=\s*', str(detail))[0])[0]
 
