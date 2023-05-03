@@ -235,6 +235,9 @@ class ClassInfo:
                     hint_parts.append('np.ndarray')
                 elif h == 'Circuit':
                     hint_parts.append('QuantumCircuit')
+                elif h == 'matrix_like':
+                    # just ignore
+                    pass
                 else:
                     parts = h.split('.')
                     if len(parts) > 1:
@@ -281,7 +284,7 @@ class ClassInfo:
                 return self.name
 
         def supplement_signature_parameters(signature) -> dict:
-            """signature may have '*', so take care of such cases"""
+            """signature may have '*', so take care of such cases, e.g., z2_symmetries.py"""
 
             signature_parameters = OrderedDict()
 
@@ -289,6 +292,7 @@ class ClassInfo:
             signature_str = re.split(r'\s*->\s*', signature_str)[0]
             signature_str = signature_str.replace('(', '').replace(')', '')
             signature_list = re.split(r'\s*,\s*', signature_str)
+            signature_list = [re.split(r'\s*=\s*', parameter)[0] for parameter in signature_list]
             signature_list = [re.split(r'\s*:\s*', parameter)[0] for parameter in signature_list]
             for key in signature_list:
                 signature_parameters[key] = signature.parameters[key] if key in signature.parameters else DummyDetail(key)
