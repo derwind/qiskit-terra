@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from functools import cmp_to_key
 import docstring_parser
 from collections import OrderedDict
-from typing import List, Dict, Tuple, TypedDict
+from typing import List, Set, Dict, Tuple, TypedDict
 
 
 if sys.version_info.major < 3 or sys.version_info.minor < 10:
@@ -163,7 +163,16 @@ class ClassInfo:
             print('[DOCSTRING]', arg_types, '->', returns_types.args[-1] if valid_returns_types else '')
 
         if self.detect_missing_symbols:
-            self._detect_missing_symbols(list(arg_types.values()), returns_types.args[-1] if valid_returns_types else None)
+            missing_candidates = self._detect_missing_symbols(list(arg_types.values()), returns_types.args[-1] if valid_returns_types else None)
+            if missing_candidates:
+                log_file_path = 'missing_candidates.txt'
+                mode = 'a' if os.path.isfile(log_file_path) else 'w'
+                with open(log_file_path, mode) as fout:
+                    print(f'[[{short_class_name}]]', file=fout)
+                    print(f'[{short_method_name}]', file=fout)
+                    for symbol in missing_candidates:
+                        print('*', symbol, ':', self.global_class2modules[symbol]['definition'], file=fout)
+                    print(f'-', *50, file=fout)
 
         new_signature = self._supplement_signature(signature, arg_types, returns_types, short_class_name, is_classmethod)
         if self.verbose:
@@ -296,7 +305,7 @@ class ClassInfo:
 
         return new_signature
 
-    def _detect_missing_symbols(self, arg_types: List[str], returns_types: str | None = None):
+    def _detect_missing_symbols(self, arg_types: List[str], returns_types: str | None = None) -> Set[str]:
         """detect symbols which are globally known but are not locally known"""
 
         types = set()
@@ -317,7 +326,8 @@ class ClassInfo:
                 print('[missing candidates]')
                 for symbol in missing_candidates:
                     print('*', symbol, ':', self.global_class2modules[symbol]['definition'])
-                raise Exception('some missing_candidates found')
+
+        return missing_candidates
 
     @staticmethod
     def extract_class_name(class_xxx: str):
