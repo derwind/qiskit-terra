@@ -572,7 +572,7 @@ class SignatureReplacer:
                     if line_no == last_import_line_no_line_no:
                         # dump missing import
                         for from_, modules in self.signature_improver.missing_symbols.items():
-                            print(f"from {from_} import {', '.join(modules)}", file=fout)
+                            print(f"from {from_} import {', '.join(modules)}  # added by auto_typehints", file=fout)
                 else:
                     # start of method signature
                     if m := re.search(r'^\s+def\s+(\S+)\s*\(', line):
