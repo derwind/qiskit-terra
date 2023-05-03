@@ -101,11 +101,13 @@ class ClassInfo:
         visitor: ImportVisitor,
         global_class2modules: Dict[str, ModuleInfo],
         local_class2modules: Dict[str, ModuleInfo],
+        detect_missing_symbols: bool = False,
         verbose: bool = False,
     ) -> Dict[str, str]:
         self.visitor = visitor
         self.global_class2modules = global_class2modules
         self.local_class2modules = local_class2modules
+        self.detect_missing_symbols = detect_missing_symbols
         self.verbose = verbose
         self._methods2signatures = {}
         full_class_name = self.extract_class_name(str(class_type))
@@ -160,7 +162,8 @@ class ClassInfo:
         if self.verbose:
             print('[DOCSTRING]', arg_types, '->', returns_types.args[-1] if valid_returns_types else '')
 
-        self._detect_unresolved_symbols(list(arg_types.values()), returns_types.args[-1] if valid_returns_types else None)
+        if self.detect_missing_symbols:
+            self._detect_missing_symbols(list(arg_types.values()), returns_types.args[-1] if valid_returns_types else None)
 
         new_signature = self._supplement_signature(signature, arg_types, returns_types, short_class_name, is_classmethod)
         if self.verbose:
@@ -283,7 +286,7 @@ class ClassInfo:
 
         return new_signature
 
-    def _detect_unresolved_symbols(self, arg_types: List[str], returns_types: str | None = None):
+    def _detect_missing_symbols(self, arg_types: List[str], returns_types: str | None = None):
         """detect symbols which are globally known but are not locally known"""
 
         types = set()
@@ -293,9 +296,16 @@ class ClassInfo:
         if returns_types is not None:
             types = types | {t for t in re.split(r'\s*\|\s*', returns_types) if t != 'None'}
 
+        missing_candidates = set()
+        for typ in types:
+            # candidates are what are not found locally, but found globally
+            if typ not in self.local_class2modules and typ in self.global_class2modules:
+                missing_candidates.add(typ)
+
         if self.verbose:
-            print('[_detect_unresolved_symbols]')
-            print(types)
+            print('[missing candidates]')
+            print(missing_candidates)
+            raise
 
     @staticmethod
     def extract_class_name(class_xxx: str):
@@ -351,7 +361,7 @@ class ClassInfo:
 class SignatureImprover:
     """Construct a new signature for the method"""
 
-    def __init__(self, file_path: str, visitor: ImportVisitor, class2modules: Dict[str, ModuleInfo], verbose: bool = False):
+    def __init__(self, file_path: str, visitor: ImportVisitor, class2modules: Dict[str, ModuleInfo], detect_missing_symbols: bool = False, verbose: bool = False):
         file_path, _ = os.path.splitext(file_path)  # e.g. path/to/qiskit/quantum_info/states/statevector
         path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', 'qiskit', 'quantum_info', 'states', 'statevector']
         loc = path_elems.index('qiskit')
@@ -359,6 +369,7 @@ class SignatureImprover:
         self.mod = importlib.import_module(self.module_name)
         self.visitor = visitor
         self.global_class2modules = class2modules
+        self.detect_missing_symbols = detect_missing_symbols
         self.verbose = verbose
         self._classname2info: Dict[str, ClassInfo] = {}
 
@@ -387,7 +398,7 @@ class SignatureImprover:
             obj_name, obj_type = x
             # proc for each class in the module
             if inspect.isclass(obj_type):
-                info = ClassInfo(self.module_name, obj_name, obj_type, self.visitor, self.global_class2modules, local_class2modules, self.verbose)
+                info = ClassInfo(self.module_name, obj_name, obj_type, self.visitor, self.global_class2modules, local_class2modules, self.detect_missing_symbols, self.verbose)
                 self._classname2info[obj_name] = info
 
 
@@ -476,7 +487,7 @@ class SignatureReplacer:
 
 
 def autohints(
-    module_name: str, qiskit_root: str, suffix: str | None = None, inplace: bool = False, only_filename: str | None = None, verbose: bool = False
+    module_name: str, qiskit_root: str, suffix: str | None = None, inplace: bool = False, only_filename: str | None = None, detect_missing_symbols: bool = False, verbose: bool = False
 ):
     module_root = None
     for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
@@ -516,7 +527,7 @@ def autohints(
                 print(visitor.name2info)
                 print('#--------------------------')
 
-            signature_improver = SignatureImprover(file_path, visitor, class2modules, verbose=verbose)
+            signature_improver = SignatureImprover(file_path, visitor, class2modules, detect_missing_symbols, verbose=verbose)
             signature_improver.run()
 
             if verbose:
@@ -539,6 +550,7 @@ def parse_opt():
     group.add_argument('--suffix', dest='suffix', type=str, default=None, help='suffix of file')
     group.add_argument('--inplace', action='store_true', help='in-place replacement?')
     parser.add_argument('--only', dest='only_filename', type=str, default=None, help='file name')
+    parser.add_argument('--detect-missing-symbols', dest='detect_missing_symbols', action='store_true', help='detect missing symbols?')
     parser.add_argument('--verbose', action='store_true', help='output logs?')
     parser.add_argument('module_name', type=str, help="module_name such as 'quantum_info'")
 
@@ -549,7 +561,7 @@ def parse_opt():
 
 def main():
     args = parse_opt()
-    autohints(args.module_name, args.qiskit_root, args.suffix, args.inplace, args.only_filename, args.verbose)
+    autohints(args.module_name, args.qiskit_root, args.suffix, args.inplace, args.only_filename, args.detect_missing_symbols, args.verbose)
 
 
 if __name__ == '__main__':
