@@ -551,7 +551,8 @@ class SignatureReplacer:
             new_method_decl = None
 
             lines = [line.rstrip() for line in fin.readlines()]
-            last_import_line_no_line_no = self._calc_last_import_line_no(lines)
+            first_import_line_no = self._calc_first_import_line_no(lines)
+            last_import_line_no = self._calc_last_import_line_no(lines)
 
             for line_no, line in enumerate(lines):
                 # end of class definition
@@ -573,9 +574,14 @@ class SignatureReplacer:
                     continue
 
                 if class_name is None:
+                    if line_no == first_import_line_no:
+                        if '__future__' not in line:
+                            print('from __future__ import annotations  # added by auto_typehints', file=fout)
+
                     print(line, file=fout)
 
-                    if line_no == last_import_line_no_line_no:
+                    # may be last == first, so not use elif...
+                    if line_no == last_import_line_no:
                         # dump missing import
                         for from_, modules in self.signature_improver.missing_symbols.items():
                             print(f"from {from_} import {', '.join(modules)}  # added by auto_typehints", file=fout)
@@ -608,12 +614,22 @@ class SignatureReplacer:
 
             shutil.move(out_file_path, self.file_path)
 
+    def _calc_first_import_line_no(self, lines: List[str]) -> int | None:
+        for line_no in range(len(lines)):
+            line = lines[line_no]
+            if re.search(r'^import', line):
+                return line_no
+            elif re.search(r'^from', line):
+                return line_no
+
+        return None
+
     def _calc_last_import_line_no(self, lines: List[str]) -> int | None:
         for line_no in range(len(lines) - 1, -1, -1):
             line = lines[line_no]
-            if m := re.search(r'^import', line):
+            if re.search(r'^import', line):
                 return line_no
-            elif m := re.search(r'^from', line):
+            elif re.search(r'^from', line):
                 if '(' not in line:
                     return line_no
                 for lno in range(line_no, len(lines) - 1):
