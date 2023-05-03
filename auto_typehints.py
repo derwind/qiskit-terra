@@ -180,6 +180,13 @@ class ClassInfo:
         short_class_name: str,
         is_classmethod: bool,
     ) -> str:
+        """supplement signature
+        Args:
+            signature (inspect.Signature): signature from original typehints
+            doc_arg_types (OrderedDict[str, str]): signature from docstrings
+            doc_returns_types (str | inspect._empty): return value signature from docstrings
+        """
+
         def fix_hint(hint, class_name: str = short_class_name, visitor: ImportVisitor = self.visitor):
             if hint is None:
                 return None
@@ -243,7 +250,7 @@ class ClassInfo:
                     hint = doc_arg_types[name]
                 name2hint[qualified_name] = fix_hint(hint)
             else:
-                name2hint[qualified_name] = fix_hint(str(detail.annotation))
+                name2hint[qualified_name] = fix_hint(str(detail.annotation.__qualname__))
             # no default value
             if detail.default == inspect.Parameter.empty:
                 name2default[qualified_name] = inspect.Parameter.empty
@@ -331,7 +338,7 @@ class ClassInfo:
         for k, v in arg_types.items():
             if v is None and '\n' in k:
                 # broken
-                k = re.sub(r'\s*'+'\n'+r'\s*', ' ', k)
+                k = re.sub(r'\s*' + '\n' + r'\s*', ' ', k)
                 if m := re.match(r'(\S+)\s*\((.*)\)', k):
                     k = m.group(1)
                     v = m.group(2)
@@ -363,7 +370,14 @@ class ClassInfo:
 class SignatureImprover:
     """Construct a new signature for the method"""
 
-    def __init__(self, file_path: str, visitor: ImportVisitor, class2modules: Dict[str, ModuleInfo], detect_missing_symbols: bool = False, verbose: bool = False):
+    def __init__(
+        self,
+        file_path: str,
+        visitor: ImportVisitor,
+        class2modules: Dict[str, ModuleInfo],
+        detect_missing_symbols: bool = False,
+        verbose: bool = False,
+    ):
         file_path, _ = os.path.splitext(file_path)  # e.g. path/to/qiskit/quantum_info/states/statevector
         path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', 'qiskit', 'quantum_info', 'states', 'statevector']
         loc = path_elems.index('qiskit')
@@ -400,7 +414,16 @@ class SignatureImprover:
             obj_name, obj_type = x
             # proc for each class in the module
             if inspect.isclass(obj_type):
-                info = ClassInfo(self.module_name, obj_name, obj_type, self.visitor, self.global_class2modules, local_class2modules, self.detect_missing_symbols, self.verbose)
+                info = ClassInfo(
+                    self.module_name,
+                    obj_name,
+                    obj_type,
+                    self.visitor,
+                    self.global_class2modules,
+                    local_class2modules,
+                    self.detect_missing_symbols,
+                    self.verbose,
+                )
                 self._classname2info[obj_name] = info
 
 
@@ -489,7 +512,13 @@ class SignatureReplacer:
 
 
 def autohints(
-    module_name: str, qiskit_root: str, suffix: str | None = None, inplace: bool = False, only_filename: List[str] | None = None, detect_missing_symbols: bool = False, verbose: bool = False
+    module_name: str,
+    qiskit_root: str,
+    suffix: str | None = None,
+    inplace: bool = False,
+    only_filename: List[str] | None = None,
+    detect_missing_symbols: bool = False,
+    verbose: bool = False,
 ):
     module_root = None
     for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
