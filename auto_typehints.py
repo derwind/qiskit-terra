@@ -225,7 +225,8 @@ class ClassInfo:
             hint_parts = []
             for h in re.split(r'\s*\|\s*', hint):
                 if h == class_name:
-                    hint_parts.append(f"'{h}'")
+                    # e.g. Statevector -> "Statevector"
+                    hint_parts.append(f'"{h}"')
                 elif h == 'string':
                     hint_parts.append('str')
                 elif h == 'boolean':
