@@ -233,6 +233,8 @@ class ClassInfo:
                     hint_parts.append('bool')
                 elif h == 'array' or h == 'np.array':
                     hint_parts.append('np.ndarray')
+                elif h == 'Circuit':
+                    hint_parts.append('QuantumCircuit')
                 else:
                     parts = h.split('.')
                     if len(parts) > 1:
