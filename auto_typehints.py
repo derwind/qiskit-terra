@@ -188,7 +188,7 @@ class ClassInfo:
                                 second_candidate = sorted(shorter_modules)[0]
                         print('*', symbol, ':', definition, f'({second_candidate})', file=fout)
 
-                        #from_module = second_candidate if second_candidate else definition
+                        # from_module = second_candidate if second_candidate else definition
 
                         # memory info for later use
                         self._missing_symbols.setdefault(definition, [])
@@ -656,7 +656,7 @@ def autohints(
         if only_filename and os.path.basename(file_path) not in only_filename:
             continue
 
-        #try:
+        # try:
         if True:
             with open(file_path) as fin:
                 module = ast.parse(fin.read())
@@ -682,7 +682,7 @@ def autohints(
 
             signature_replacer = SignatureReplacer(file_path, signature_improver, suffix=suffix, inplace=inplace)
             signature_replacer.run()
-        #except Exception as e:
+        # except Exception as e:
         #    print('[[Exception]]', file_path, e, file=sys.stderr)
 
 
