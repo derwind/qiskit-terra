@@ -228,6 +228,8 @@ class ClassInfo:
                     hint_parts.append(f"'{h}'")
                 elif h == 'string':
                     hint_parts.append('str')
+                elif h == 'boolean':
+                    hint_parts.append('bool')
                 else:
                     parts = h.split('.')
                     if len(parts) > 1:
