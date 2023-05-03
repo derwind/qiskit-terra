@@ -553,7 +553,7 @@ class SignatureReplacer:
                     class_name = None
 
                 # end of method signature
-                if method_name is not None and ':' in line:
+                if method_name is not None and line.endswith(':'):
                     if new_method_decl is not None:
                         print(new_method_decl, file=fout)
                         new_method_decl = None
@@ -585,7 +585,7 @@ class SignatureReplacer:
                             # not improvements, just output
                             print(line, file=fout)
 
-                        if ':' in line:
+                        if line.endswith(':'):
                             if new_method_decl is not None:
                                 print(new_method_decl, file=fout)
                                 new_method_decl = None
