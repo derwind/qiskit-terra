@@ -230,6 +230,8 @@ class ClassInfo:
                     hint_parts.append('str')
                 elif h == 'boolean':
                     hint_parts.append('bool')
+                elif h == 'array' or h == 'np.array':
+                    hint_parts.append('np.ndarray')
                 else:
                     parts = h.split('.')
                     if len(parts) > 1:
