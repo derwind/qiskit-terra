@@ -630,7 +630,8 @@ def autohints(
         if only_filename and os.path.basename(file_path) not in only_filename:
             continue
 
-        try:
+        #try:
+        if True:
             with open(file_path) as fin:
                 module = ast.parse(fin.read())
 
@@ -655,8 +656,8 @@ def autohints(
 
             signature_replacer = SignatureReplacer(file_path, signature_improver, suffix=suffix, inplace=inplace)
             signature_replacer.run()
-        except Exception as e:
-            print('[[Exception]]', file_path, e, file=sys.stderr)
+        #except Exception as e:
+        #    print('[[Exception]]', file_path, e, file=sys.stderr)
 
 
 def parse_opt():
