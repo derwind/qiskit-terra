@@ -487,7 +487,7 @@ class SignatureReplacer:
 
 
 def autohints(
-    module_name: str, qiskit_root: str, suffix: str | None = None, inplace: bool = False, only_filename: str | None = None, detect_missing_symbols: bool = False, verbose: bool = False
+    module_name: str, qiskit_root: str, suffix: str | None = None, inplace: bool = False, only_filename: List[str] | None = None, detect_missing_symbols: bool = False, verbose: bool = False
 ):
     module_root = None
     for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
@@ -511,7 +511,7 @@ def autohints(
     for file_path in glob.glob(os.path.join(module_root, '**/*.py'), recursive=True):
         if suffix is not None and file_path.endswith(f'{suffix}.py'):
             continue
-        if only_filename is not None and os.path.basename(file_path) != only_filename:
+        if only_filename and os.path.basename(file_path) not in only_filename:
             continue
 
         try:
@@ -549,7 +549,7 @@ def parse_opt():
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--suffix', dest='suffix', type=str, default=None, help='suffix of file')
     group.add_argument('--inplace', action='store_true', help='in-place replacement?')
-    parser.add_argument('--only', dest='only_filename', type=str, default=None, help='file name')
+    parser.add_argument('--only', dest='only_filename', nargs='*', type=str, default=[], help='file name')
     parser.add_argument('--detect-missing-symbols', dest='detect_missing_symbols', action='store_true', help='detect missing symbols?')
     parser.add_argument('--verbose', action='store_true', help='output logs?')
     parser.add_argument('module_name', type=str, help="module_name such as 'quantum_info'")
