@@ -31,13 +31,24 @@ def import_modules(module_name: str, qiskit_root: str, only_filename: List[str] 
     sys.path.append(qiskit_root)
     sys.path.append(module_root)
 
+    failed_files = []
     for file_path in glob.glob(os.path.join(module_root, '**/*.py'), recursive=True):
         if only_filename and os.path.basename(file_path) not in only_filename:
             continue
 
-        mod = import_module(file_path)
-        if verbose:
-            print(mod)
+        try:
+            mod = import_module(file_path)
+            if verbose:
+                print(mod)
+        except Exception as e:
+            print(e)
+            failed_files.append(file_path)
+
+    if failed_files:
+        print('-' * 50)
+        print('[Summary for failed files]')
+        for file_path in failed_files:
+            print(file_path)
 
 
 def parse_opt():
