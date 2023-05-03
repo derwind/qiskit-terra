@@ -284,7 +284,7 @@ class ClassInfo:
             signature_parameters = OrderedDict()
 
             signature_str = str(signature)
-            signature_str = re.split(r'\s*->\*', signature_str)[0]
+            signature_str = re.split(r'\s*->\s*', signature_str)[0]
             signature_str = signature_str.replace('(', '').replace(')', '')
             signature_list = re.split(r'\s*,\s*', signature_str)
             signature_list = [re.split(r'\s*:\s*', parameter)[0] for parameter in signature_list]
