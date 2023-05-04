@@ -247,6 +247,9 @@ class ClassInfo:
                 elif h == 'matrix_like':
                     # just ignore
                     pass
+                elif h == 'LabelIterator' or h == 'MatrixIterator':
+                    # just ignore
+                    pass
                 else:
                     parts = h.split('.')
                     if len(parts) > 1:
@@ -281,7 +284,7 @@ class ClassInfo:
                                 else:
                                     h = info.alias
                     hint_parts.append(h)
-            return ' | '.join(hint_parts)
+            return ' | '.join(hint_parts) if hint_parts else None
 
         @dataclass
         class DummyDetail:
@@ -363,18 +366,24 @@ class ClassInfo:
         # returns of methods
         if signature.return_annotation != inspect.Parameter.empty:  # from type hint
             return_type = fix_hint(self.extract_class_name(str(signature.return_annotation)))
-            new_signature += f' -> {return_type}'
+            if return_type is not None:
+                new_signature += f' -> {return_type}'
         else:
             if doc_returns_types:  # from docstring
                 if isinstance(doc_returns_types, docstring_parser.common.DocstringReturns):
                     if doc_returns_types.type_name not in self.ignore_cases:
-                        new_signature += f' -> {fix_hint(doc_returns_types.type_name)}'
+                        return_type = fix_hint(doc_returns_types.type_name)
+                        if return_type is not None:
+                            new_signature += f' -> {return_type}'
                 elif inspect.isclass(doc_returns_types):
                     full_class_name = self.extract_class_name(str(doc_returns_types))
-                    new_signature += f' -> {fix_hint(full_class_name)}'
+                    return_type = fix_hint(full_class_name)
+                    if return_type is not None:
+                        new_signature += f' -> {return_type}'
                 else:
                     return_type = fix_hint(str(doc_returns_types))
-                    new_signature += f' -> {return_type}'
+                    if return_type is not None:
+                        new_signature += f' -> {return_type}'
 
         return new_signature
 
