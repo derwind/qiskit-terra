@@ -27,6 +27,8 @@ class ModuleInfo(TypedDict):
 
 SPECIAL_TREATMENTS: Dict[str, ModuleInfo] = {'Layout': {'definition': 'qiskit.transpiler.layout', 'module_names': []}}
 
+IGNORED_TYPES = {'LabelIterator', 'MatrixIterator'}
+
 
 def make_class2modules(module_root: str, suffix: str = None, enable_special_treatment: bool = False) -> Dict[str, ModuleInfo]:
     def name_dist(a: str, b: str):
@@ -247,7 +249,7 @@ class ClassInfo:
                 elif h == 'matrix_like':
                     # just ignore
                     pass
-                elif h == 'LabelIterator' or h == 'MatrixIterator':
+                elif h in IGNORED_TYPES:
                     # just ignore
                     pass
                 else:
