@@ -390,8 +390,13 @@ class ClassInfo:
                     if 'Optional' not in name2hint[qualified_name] and 'None' not in name2hint[qualified_name]:
                         name2hint[qualified_name] += ' | None'
                 default_value = detail.default
+                # e.g. "string"
                 if isinstance(detail.default, str):
                     default_value = f'"{default_value}"'
+                # e.g. dtype=complex in sparse_pauli_op.py
+                elif isinstance(detail.default, type):
+                    if m := re.match(r"<class '(\S+)'>", str(default_value)):
+                        default_value = m.group(1)
                 name2default[qualified_name] = default_value
 
         new_signature_elems = []
