@@ -361,12 +361,39 @@ class ClassInfo:
         def supplement_signature_parameters(signature) -> dict:
             """signature may have '*', so take care of such cases, e.g., z2_symmetries.py"""
 
+            def split_signature_str2list(signature_str):
+                # return re.split(r'\s*,\s*', signature_str)
+
+                signature_list = []
+                depth = 0
+                start = 0
+                seek_start = False
+                for i, c in enumerate(signature_str):
+                    if seek_start:
+                        if c != ' ':
+                            start = i
+                            seek_start = False
+                        continue
+
+                    if c == ',' and depth == 0:
+                        signature_list.append(signature_str[start:i])
+                        seek_start = True
+                    elif c == '[':
+                        depth += 1
+                    elif c == ']':
+                        depth -= 1
+                if not seek_start:
+                    signature_list.append(signature_str[start:])
+
+                return signature_list
+
             signature_parameters = OrderedDict()
 
             signature_str = str(signature)
             signature_str = re.split(r'\s*->\s*', signature_str)[0]
             signature_str = signature_str.replace('(', '').replace(')', '')
-            signature_list = re.split(r'\s*,\s*', signature_str)
+            # difficult case: assign_parameters(self, parameters: Mapping[Parameter, complex | ParameterExpression]| Sequence[complex | ParameterExpression], inplace: bool = False) of sparse_pauli_op.py
+            signature_list = split_signature_str2list(signature_str)
             signature_list = [re.split(r'\s*=\s*', parameter)[0] for parameter in signature_list]
             signature_list = [re.split(r'\s*:\s*', parameter)[0] for parameter in signature_list]
             for key in signature_list:
