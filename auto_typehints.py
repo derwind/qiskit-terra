@@ -101,6 +101,45 @@ class ImportVisitor(ast.NodeVisitor):
             self._name2info[alias.name] = AstClassInfo(module, alias.name)
 
 
+class ClassVisitor(ast.NodeVisitor):
+    def __init__(self):
+        super().__init__()
+        self._class2methods: Dict[str, Dict[str, str]] = {}
+
+    @property
+    def class2methods(self):
+        return self._class2methods
+
+    def visit_ClassDef(self, node: ast.ClassDef):
+        class MethodVisitor(ast.NodeVisitor):
+            def __init__(self):
+                super().__init__()
+                self._method2signature = {}
+
+            @property
+            def method2signature(self):
+                return self._method2signature
+
+            def visit_FunctionDef(self, node):
+                signature_elems = []
+                if node.args.args:
+                    signature_elems.extend([x.arg for x in node.args.args])
+                if node.args.vararg is not None:
+                    signature_elems.append('*' + node.args.vararg.arg)
+                if node.args.kwonlyargs:
+                    if node.args.vararg is None:
+                        signature_elems.append('*')
+                    signature_elems.extend([x.arg for x in node.args.kwonlyargs])
+                if node.args.kwarg is not None:
+                    signature_elems.append('**' + node.args.kwarg.arg)
+
+                self.method2signature[node.name] = f"({', '.join(signature_elems)})"
+
+        visitor = MethodVisitor()
+        visitor.visit(node)
+        self._class2methods[node.name] = visitor.method2signature
+
+
 class ClassInfo:
     """inspect given class and manage info of class such as signatures of methods belonging to it"""
 
@@ -113,12 +152,14 @@ class ClassInfo:
         global_class2modules: Dict[str, ModuleInfo],
         local_class2modules: Dict[str, ModuleInfo],
         detect_missing_symbols: bool = False,
+        ast_method2signature: Dict[str, str] | None = None,
         verbose: bool = False,
     ) -> Dict[str, str]:
         self.visitor = visitor
         self.global_class2modules = global_class2modules
         self.local_class2modules = local_class2modules
         self.detect_missing_symbols = detect_missing_symbols
+        self.ast_method2signature: Dict[str, str] = ast_method2signature or {}
         self.verbose = verbose
         self._methods2signatures = {}
         self._missing_symbols = {}
@@ -162,6 +203,8 @@ class ClassInfo:
         signature = inspect.signature(insp_method)
         if self.verbose:
             print('[Type Hint]', full_method_name, '=>', signature.parameters, '->', signature.return_annotation)
+            if short_method_name in self.ast_method2signature:
+                print('[AST info ]', full_method_name, '=>', self.ast_method2signature[short_method_name])
 
         # print('[DOCSTRING]', inspect.getdoc(method_type))
         try:
@@ -475,6 +518,9 @@ class SignatureImprover:
         detect_missing_symbols: bool = False,
         verbose: bool = False,
     ):
+        # with open(file_path) as fin:
+        #    module = ast.parse(fin.read())
+
         file_path, _ = os.path.splitext(file_path)  # e.g. path/to/qiskit/quantum_info/states/statevector
         path_elems = file_path.split(os.sep)  # e.g. ['path', 'to', 'qiskit', 'quantum_info', 'states', 'statevector']
         loc = path_elems.index('qiskit')
@@ -485,6 +531,10 @@ class SignatureImprover:
         self.detect_missing_symbols = detect_missing_symbols
         self.verbose = verbose
         self._classname2info: Dict[str, ClassInfo] = {}  # key: class name, value: class info
+
+        # visitor = ClassVisitor()
+        # visitor.visit(module)
+        self.ast_class2methods = {}  # visitor.class2methods
 
     @property
     def class_names(self):
@@ -521,6 +571,7 @@ class SignatureImprover:
             if not isinstance(x, tuple):
                 continue
             obj_name, obj_type = x
+            ast_method2signature = self.ast_class2methods[obj_name] if obj_name in self.ast_class2methods else {}
             # proc for each class in the module
             if inspect.isclass(obj_type):
                 info = ClassInfo(
@@ -531,6 +582,7 @@ class SignatureImprover:
                     self.global_class2modules,
                     local_class2modules,
                     self.detect_missing_symbols,
+                    ast_method2signature,
                     self.verbose,
                 )
                 self._classname2info[obj_name] = info
@@ -607,7 +659,7 @@ class SignatureReplacer:
                             print(f"from {from_} import {', '.join(modules)}  # added by auto_typehints", file=fout)
                 else:
                     # start of method signature
-                    if m := re.search(r'^\s+def\s+(\S+)\s*\(', line):
+                    if m := re.search(r'^    def\s+(\S+)\s*\(', line):
                         method_name = m.group(1)
                         if method_name in self.signature_improver.methods2signatures(class_name):
                             signature = self.signature_improver.methods2signatures(class_name)[method_name]
