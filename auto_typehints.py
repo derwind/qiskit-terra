@@ -25,7 +25,25 @@ class ModuleInfo(TypedDict):
     module_names: List[str]
 
 
-SPECIAL_TREATMENTS: Dict[str, ModuleInfo] = {'Layout': {'definition': 'qiskit.transpiler.layout', 'module_names': []}}
+TYPING_SPECIAL_TREATMENTS: Dict[str, ModuleInfo] = {
+    'Tuple': {'definition': 'typing', 'module_names': []},
+    'Union': {'definition': 'typing', 'module_names': []},
+    'Optional': {'definition': 'typing', 'module_names': []},
+    'Callable': {'definition': 'typing', 'module_names': []},
+    'Literal': {'definition': 'typing', 'module_names': []},
+    'Dict': {'definition': 'typing', 'module_names': []},
+    'List': {'definition': 'typing', 'module_names': []},
+    'Set': {'definition': 'typing', 'module_names': []},
+    'FrozenSet': {'definition': 'typing', 'module_names': []},
+    'Sequence': {'definition': 'typing', 'module_names': []},
+    'Mapping': {'definition': 'typing', 'module_names': []},
+    'Iterable': {'definition': 'typing', 'module_names': []},
+}
+
+SPECIAL_TREATMENTS: Dict[str, ModuleInfo] = {
+    'Layout': {'definition': 'qiskit.transpiler.layout', 'module_names': []},
+}
+SPECIAL_TREATMENTS.update(TYPING_SPECIAL_TREATMENTS)
 
 IGNORED_TYPES = {'LabelIterator', 'MatrixIterator'}
 
@@ -440,6 +458,12 @@ class ClassInfo:
     def _detect_missing_symbols(self, arg_types: List[str], returns_types: str | None = None) -> Set[str]:
         """detect symbols which are globally known but are not locally known"""
 
+        def check_typing(typ, missing_candidates):
+            for typing_type in TYPING_SPECIAL_TREATMENTS:
+                # missing 'from typing import xxx'
+                if typing_type in typ and typing_type not in self.visitor.name2info:
+                    missing_candidates.add(typing_type)
+
         types = set()
         for typ in arg_types:
             if typ is not None:
@@ -452,6 +476,7 @@ class ClassInfo:
             # candidates are what are not found locally, but found globally
             if typ not in self.local_class2modules and typ in self.global_class2modules:
                 missing_candidates.add(typ)
+            check_typing(typ, missing_candidates)
 
         if self.verbose:
             if missing_candidates:
@@ -537,9 +562,9 @@ class SignatureImprover:
         self.verbose = verbose
         self._classname2info: Dict[str, ClassInfo] = {}  # key: class name, value: class info
 
-        # visitor = ClassVisitor()
-        # visitor.visit(module)
-        self.ast_class2methods = {}  # visitor.class2methods
+        # class_visitor = ClassVisitor()
+        # class_visitor.visit(module)
+        self.ast_class2methods = {}  # class_visitor.class2methods
 
     @property
     def class_names(self):
