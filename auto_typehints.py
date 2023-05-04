@@ -25,7 +25,10 @@ class ModuleInfo(TypedDict):
     module_names: List[str]
 
 
-def make_class2modules(module_root: str, suffix: str = None) -> Dict[str, ModuleInfo]:
+SPECIAL_TREATMENTS: Dict[str, ModuleInfo] = {'Layout': {'definition': 'qiskit.transpiler.layout', 'module_names': []}}
+
+
+def make_class2modules(module_root: str, suffix: str = None, enable_special_treatment: bool = False) -> Dict[str, ModuleInfo]:
     def name_dist(a: str, b: str):
         if a in b:
             return -b.replace(a, '').count('.')
@@ -57,6 +60,10 @@ def make_class2modules(module_root: str, suffix: str = None) -> Dict[str, Module
 
     for cls, modules in sorted(class2modules.items()):
         modules['module_names'] = sorted(modules['module_names'], key=cmp_to_key(name_dist))
+
+    if enable_special_treatment:
+        # These info are hard to be automatically collected.
+        class2modules.update(SPECIAL_TREATMENTS)
 
     return class2modules
 
@@ -231,10 +238,12 @@ class ClassInfo:
                     hint_parts.append('str')
                 elif h == 'boolean':
                     hint_parts.append('bool')
-                elif h == 'array' or h == 'np.array':
+                elif h == 'array' or h == 'np.array' or h == 'Numpy.ndarray':
                     hint_parts.append('np.ndarray')
                 elif h == 'Circuit':
                     hint_parts.append('QuantumCircuit')
+                elif h == 'matrix':
+                    hint_parts.append('np.matrix')
                 elif h == 'matrix_like':
                     # just ignore
                     pass
@@ -667,6 +676,7 @@ def autohints(
     only_filename: List[str] | None = None,
     only_dirname: List[str] | None = None,
     detect_missing_symbols: bool = False,
+    enhance_missing_symbols_treatment: bool = False,
     verbose: bool = False,
 ):
     if os.path.isfile(MISSING_SYMBOLS_FILE):
@@ -688,7 +698,7 @@ def autohints(
     sys.path.append(module_root)
 
     # First, collect 'class to module' info
-    class2modules = make_class2modules(module_root, suffix)
+    class2modules = make_class2modules(module_root, suffix, enhance_missing_symbols_treatment)
 
     # Second, improve signature
     for file_path in glob.glob(os.path.join(module_root, '**/*.py'), recursive=True):
@@ -739,6 +749,12 @@ def parse_opt():
     group.add_argument('--only', dest='only_filename', nargs='*', type=str, default=[], help='file name')
     group.add_argument('--only-dir', dest='only_dirname', nargs='*', type=str, default=[], help='directory name')
     parser.add_argument('--detect-missing-symbols', dest='detect_missing_symbols', action='store_true', help='detect missing symbols?')
+    parser.add_argument(
+        '--enhance-missing-symbols-treatment',
+        dest='enhance_missing_symbols_treatment',
+        action='store_true',
+        help='enhance missing symbols treatment?',
+    )
     parser.add_argument('--verbose', action='store_true', help='output logs?')
     parser.add_argument('module_name', type=str, help="module_name such as 'quantum_info'")
 
@@ -757,6 +773,7 @@ def main():
         args.only_filename,
         args.only_dirname,
         args.detect_missing_symbols,
+        args.enhance_missing_symbols_treatment,
         args.verbose,
     )
 
