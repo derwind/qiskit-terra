@@ -48,6 +48,9 @@ SPECIAL_TREATMENTS.update(TYPING_SPECIAL_TREATMENTS)
 IGNORED_TYPES = {'LabelIterator', 'MatrixIterator'}
 
 
+KNOWN_CIRCULAR_IMPORT: Dict[str, ModuleInfo] = {'Pauli': {'PauliList', 'Clifford'}}
+
+
 def make_class2modules(module_root: str, suffix: str = None, enable_special_treatment: bool = False) -> Dict[str, ModuleInfo]:
     def name_dist(a: str, b: str):
         if a in b:
@@ -170,6 +173,7 @@ class ClassInfo:
         global_class2modules: Dict[str, ModuleInfo],
         local_class2modules: Dict[str, ModuleInfo],
         detect_missing_symbols: bool = False,
+        enhance_missing_symbols_treatment: bool = False,
         ast_method2signature: Dict[str, str] | None = None,
         verbose: bool = False,
     ) -> Dict[str, str]:
@@ -177,10 +181,12 @@ class ClassInfo:
         self.global_class2modules = global_class2modules
         self.local_class2modules = local_class2modules
         self.detect_missing_symbols = detect_missing_symbols
+        self.enhance_missing_symbols_treatment = enhance_missing_symbols_treatment
         self.ast_method2signature: Dict[str, str] = ast_method2signature or {}
         self.verbose = verbose
         self._methods2signatures = {}
         self._missing_symbols = {}
+        self._missing_symbols_bringing_circular_import = {}
         full_class_name = self.extract_class_name(str(class_type))
         if self.isclass_in_file(full_class_name, module_name):
             # sig = inspect.signature(class_type)
@@ -206,6 +212,10 @@ class ClassInfo:
     @property
     def missing_symbols(self) -> Dict[str, List[str]]:
         return self._missing_symbols
+
+    @property
+    def missing_symbols_bringing_circular_import(self) -> Dict[str, List[str]]:
+        return self._missing_symbols_bringing_circular_import
 
     def _method_proc(self, short_class_name: str, short_method_name: str, insp_method, is_classmethod: bool) -> Tuple[str, str] | Tuple[None, None]:
         if inspect.isfunction(insp_method):
@@ -261,6 +271,11 @@ class ClassInfo:
                         # from_module = second_candidate if second_candidate else definition
 
                         # memory info for later use
+                        if self.enhance_missing_symbols_treatment:
+                            if short_class_name in KNOWN_CIRCULAR_IMPORT and symbol in KNOWN_CIRCULAR_IMPORT[short_class_name]:
+                                self._missing_symbols_bringing_circular_import.setdefault(definition, [])
+                                self._missing_symbols_bringing_circular_import[definition].append(symbol)
+                                continue
                         self._missing_symbols.setdefault(definition, [])
                         self._missing_symbols[definition].append(symbol)
 
@@ -488,7 +503,7 @@ class ClassInfo:
         def check_typing(typ, missing_candidates):
             for typing_type in TYPING_SPECIAL_TREATMENTS:
                 # missing 'from typing import xxx'
-                if typing_type in typ and typing_type not in self.visitor.name2info:
+                if typing_type + '[' in typ and typing_type not in self.visitor.name2info:
                     missing_candidates.add(typing_type)
 
         types = set()
@@ -573,6 +588,7 @@ class SignatureImprover:
         visitor: ImportVisitor,
         class2modules: Dict[str, ModuleInfo],
         detect_missing_symbols: bool = False,
+        enhance_missing_symbols_treatment: bool = False,
         verbose: bool = False,
     ):
         # with open(file_path) as fin:
@@ -586,6 +602,7 @@ class SignatureImprover:
         self.visitor = visitor
         self.global_class2modules = class2modules
         self.detect_missing_symbols = detect_missing_symbols
+        self.enhance_missing_symbols_treatment = enhance_missing_symbols_treatment
         self.verbose = verbose
         self._classname2info: Dict[str, ClassInfo] = {}  # key: class name, value: class info
 
@@ -599,9 +616,23 @@ class SignatureImprover:
 
     @property
     def missing_symbols(self) -> Dict[str, List[str]]:
+        """return file global missing symbols"""
         symbols = {}
         for info in self._classname2info.values():
             for from_, modules in info.missing_symbols.items():
+                symbols.setdefault(from_, set())
+                symbols[from_] |= set(modules)
+        for from_, modules in symbols.items():
+            symbols[from_] = sorted(modules)
+
+        return symbols
+
+    @property
+    def missing_symbols_bring_circular_import(self) -> Dict[str, List[str]]:
+        """return file global missing symbols which bring circular import"""
+        symbols = {}
+        for info in self._classname2info.values():
+            for from_, modules in info.missing_symbols_bringing_circular_import.items():
                 symbols.setdefault(from_, set())
                 symbols[from_] |= set(modules)
         for from_, modules in symbols.items():
@@ -639,6 +670,7 @@ class SignatureImprover:
                     self.global_class2modules,
                     local_class2modules,
                     self.detect_missing_symbols,
+                    self.enhance_missing_symbols_treatment,
                     ast_method2signature,
                     self.verbose,
                 )
@@ -714,6 +746,11 @@ class SignatureReplacer:
                         # dump missing import
                         for from_, modules in self.signature_improver.missing_symbols.items():
                             print(f"from {from_} import {', '.join(modules)}  # added by auto_typehints", file=fout)
+                        if self.signature_improver.missing_symbols_bring_circular_import:
+                            print('from typing import TYPE_CHECKING', file=fout)
+                            print('if TYPE_CHECKING:', file=fout)
+                            for from_, modules in self.signature_improver.missing_symbols_bring_circular_import.items():
+                                print(f"    from {from_} import {', '.join(modules)}  # added by auto_typehints", file=fout)
                 else:
                     # start of method signature
                     if m := re.search(r'^    def\s+(\S+)\s*\(', line):
@@ -843,7 +880,9 @@ def autohints(
                 print(visitor.name2info)
                 print('#--------------------------')
 
-            signature_improver = SignatureImprover(file_path, visitor, class2modules, detect_missing_symbols, verbose=verbose)
+            signature_improver = SignatureImprover(
+                file_path, visitor, class2modules, detect_missing_symbols, enhance_missing_symbols_treatment, verbose=verbose
+            )
             signature_improver.run()
 
             if verbose:
@@ -873,7 +912,7 @@ def parse_opt():
         '--enhance-missing-symbols-treatment',
         dest='enhance_missing_symbols_treatment',
         action='store_true',
-        help='enhance missing symbols treatment?',
+        help='enhance missing symbols treatment? (to the extent possible)',
     )
     parser.add_argument('--verbose', action='store_true', help='output logs?')
     parser.add_argument('module_name', type=str, help="module_name such as 'quantum_info'")
