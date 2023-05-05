@@ -321,7 +321,7 @@ class ClassInfo:
                     hint_parts.append('str')
                 elif h == 'boolean':
                     hint_parts.append('bool')
-                elif h == 'array' or h == 'np.array' or h == 'Numpy.ndarray':
+                elif h == 'array' or h == 'ndarray' or h == 'np.array' or h == 'Numpy.ndarray':
                     hint_parts.append('np.ndarray')
                 elif h == 'Circuit':
                     hint_parts.append('QuantumCircuit')
