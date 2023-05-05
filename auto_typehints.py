@@ -45,10 +45,15 @@ SPECIAL_TREATMENTS: Dict[str, ModuleInfo] = {
 }
 SPECIAL_TREATMENTS.update(TYPING_SPECIAL_TREATMENTS)
 
-KNOWN_CIRCULAR_IMPORT: Dict[str, ModuleInfo] = {'Pauli': {'PauliList', 'Clifford'}}
+KNOWN_CIRCULAR_IMPORT: Dict[str, ModuleInfo] = {
+    'Pauli': {'PauliList', 'Clifford'},
+    'Operator': {'Layout'},
+    'SuperOp': {'Statevector', 'DensityMatrix'},
+}
 
 # API docstrings may be dynamically generated, e.g., quantum_info/operators/mixins/*.py, also see __init__.py
 IGNORED_MODULES = {'qiskit.quantum_info.operators.mixins'}
+IGNORED_FILES = {'quantum_channel.py'}
 
 
 def make_class2modules(module_root: str, suffix: str = None, enable_special_treatment: bool = False) -> Dict[str, ModuleInfo]:
@@ -871,6 +876,8 @@ def autohints(
         if retrieved_only_dirname and not path_contains_any(os.path.dirname(file_path), retrieved_only_dirname):
             continue
         if retrieved_ignored_dirname and path_contains_any(os.path.dirname(file_path), retrieved_ignored_dirname):
+            continue
+        if os.path.basename(file_path) in IGNORED_FILES:
             continue
 
         # try:
