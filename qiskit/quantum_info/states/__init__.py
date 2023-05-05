@@ -12,6 +12,7 @@
 
 """Quantum States."""
 
+from __future__ import annotations  # added by auto_typehints
 from .statevector import Statevector
 from .stabilizerstate import StabilizerState
 from .densitymatrix import DensityMatrix

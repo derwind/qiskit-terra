@@ -14,6 +14,7 @@
 Abstract BaseOperator class.
 """
 
+from __future__ import annotations  # added by auto_typehints
 import copy
 from abc import ABC
 
@@ -26,9 +27,7 @@ from .mixins import GroupMixin
 class BaseOperator(GroupMixin, ABC):
     """Abstract operator base class."""
 
-    def __init__(
-        self, input_dims=None, output_dims=None, num_qubits=None, shape=None, op_shape=None
-    ):
+    def __init__(self, input_dims: tuple | int | None = None, output_dims: tuple | int | None = None, num_qubits: int | None = None, shape: tuple | None = None, op_shape: OpShape | None = None):
         """Initialize a BaseOperator shape
 
         Args:
@@ -97,7 +96,7 @@ class BaseOperator(GroupMixin, ABC):
         """Return the total input dimension."""
         return self._op_shape._dim_l
 
-    def reshape(self, input_dims=None, output_dims=None, num_qubits=None):
+    def reshape(self, input_dims: None | tuple = None, output_dims: None | tuple = None, num_qubits: None | int = None) -> "BaseOperator":
         """Return a shallow copy with reshaped input and output subsystem dimensions.
 
         Args:
@@ -121,11 +120,11 @@ class BaseOperator(GroupMixin, ABC):
         ret._op_shape = new_shape
         return ret
 
-    def input_dims(self, qargs=None):
+    def input_dims(self, qargs = None):
         """Return tuple of input dimension for specified subsystems."""
         return self._op_shape.dims_r(qargs)
 
-    def output_dims(self, qargs=None):
+    def output_dims(self, qargs = None):
         """Return tuple of output dimension for specified subsystems."""
         return self._op_shape.dims_l(qargs)
 

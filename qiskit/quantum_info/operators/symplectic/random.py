@@ -13,6 +13,7 @@
 Random symplectic operator functions
 """
 
+from __future__ import annotations  # added by auto_typehints
 import numpy as np
 from numpy.random import default_rng
 

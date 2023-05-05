@@ -12,6 +12,7 @@
 
 """Commutator function."""
 
+from __future__ import annotations  # added by auto_typehints
 from typing import TypeVar
 
 from qiskit.quantum_info.operators.linear_op import LinearOp

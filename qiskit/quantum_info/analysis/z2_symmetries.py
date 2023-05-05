@@ -46,15 +46,7 @@ class Z2Symmetries:
             `arXiv:1701.08213 <https://arxiv.org/abs/1701.08213>`__
     """
 
-    def __init__(
-        self,
-        symmetries: Iterable[Pauli],
-        sq_paulis: Iterable[Pauli],
-        sq_list: Iterable[int],
-        tapering_values: Iterable[int] | None = None,
-        *,
-        tol: float = 1e-14,
-    ):
+    def __init__(self, symmetries: Iterable[Pauli], sq_paulis: Iterable[Pauli], sq_list: Iterable[int], tapering_values: Iterable[int] | None = None, *, tol: float = 1e-14):
         r"""
         Args:
             symmetries: Object representing the list of $Z_2$ symmetries. These correspond to
@@ -177,7 +169,7 @@ class Z2Symmetries:
         return len(self._symmetries) == 0 or len(self._sq_paulis) == 0 or len(self._sq_list) == 0
 
     @classmethod
-    def find_z2_symmetries(cls, operator: SparsePauliOp) -> Z2Symmetries:
+    def find_z2_symmetries(cls, operator: SparsePauliOp) -> "Z2Symmetries":
         """
         Finds Z2 Pauli-type symmetries of a :class:`.SparsePauliOp`.
 

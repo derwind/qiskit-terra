@@ -12,6 +12,7 @@
 
 """Helper functions for building dictionaries from matrices and lists."""
 
+from __future__ import annotations  # added by auto_typehints
 import numpy as np
 
 

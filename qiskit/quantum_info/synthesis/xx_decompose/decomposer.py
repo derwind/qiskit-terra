@@ -76,13 +76,7 @@ class XXDecomposer:
         using the method ``_default_embodiment``.
     """
 
-    def __init__(
-        self,
-        basis_fidelity: dict | float = 1.0,
-        euler_basis: str = "U",
-        embodiments: dict[float, QuantumCircuit] | None = None,
-        backup_optimizer: Callable[..., QuantumCircuit] | None = None,
-    ):
+    def __init__(self, basis_fidelity: dict | float = 1.0, euler_basis: str = "U", embodiments: dict[float, QuantumCircuit] | None = None, backup_optimizer: Callable[..., QuantumCircuit] | None = None):
         from qiskit.transpiler.passes.optimization.optimize_1q_decomposition import (
             Optimize1qGatesDecomposition,  # pylint: disable=cyclic-import
         )
@@ -191,7 +185,7 @@ class XXDecomposer:
         return len(best_sequence)
 
     @staticmethod
-    def _strength_to_infidelity(basis_fidelity, approximate=False):
+    def _strength_to_infidelity(basis_fidelity, approximate = False):
         """
         Converts a dictionary mapping XX strengths to fidelities to a dictionary mapping XX
         strengths to infidelities. Also supports one of the other formats Qiskit uses: if only a
@@ -215,12 +209,7 @@ class XXDecomposer:
 
         raise TypeError("Unknown basis_fidelity payload.")
 
-    def __call__(
-        self,
-        unitary: Operator | np.ndarray,
-        basis_fidelity: dict | float | None = None,
-        approximate: bool = True,
-    ) -> QuantumCircuit:
+    def __call__(self, unitary: Operator | np.ndarray, basis_fidelity: dict | float | None = None, approximate: bool = True) -> QuantumCircuit:
         """
         Fashions a circuit which (perhaps `approximate`ly) models the special unitary operation
         `unitary`, using the circuit templates supplied at initialization as `embodiments`.  The

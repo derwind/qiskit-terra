@@ -13,6 +13,7 @@
 Custom Lazy Iterator class
 """
 
+from __future__ import annotations  # added by auto_typehints
 from abc import ABC, abstractmethod
 
 

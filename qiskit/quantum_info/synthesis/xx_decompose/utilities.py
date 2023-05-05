@@ -14,6 +14,7 @@
 Depository for generic utility snippets.
 """
 
+from __future__ import annotations  # added by auto_typehints
 import warnings
 
 import numpy as np

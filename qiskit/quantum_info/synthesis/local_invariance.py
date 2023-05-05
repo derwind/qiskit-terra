@@ -14,6 +14,7 @@
 """Routines that use local invariants to compute properties
 of two-qubit unitary operators.
 """
+from __future__ import annotations  # added by auto_typehints
 from math import sqrt
 import numpy as np
 
