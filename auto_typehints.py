@@ -45,9 +45,6 @@ SPECIAL_TREATMENTS: Dict[str, ModuleInfo] = {
 }
 SPECIAL_TREATMENTS.update(TYPING_SPECIAL_TREATMENTS)
 
-IGNORED_TYPES = {'LabelIterator', 'MatrixIterator'}
-
-
 KNOWN_CIRCULAR_IMPORT: Dict[str, ModuleInfo] = {'Pauli': {'PauliList', 'Clifford'}}
 
 
@@ -323,9 +320,6 @@ class ClassInfo:
                 elif h == 'matrix':
                     hint_parts.append('np.matrix')
                 elif h == 'matrix_like':
-                    # just ignore
-                    pass
-                elif h in IGNORED_TYPES:
                     # just ignore
                     pass
                 else:
