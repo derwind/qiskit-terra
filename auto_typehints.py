@@ -47,6 +47,9 @@ SPECIAL_TREATMENTS.update(TYPING_SPECIAL_TREATMENTS)
 
 KNOWN_CIRCULAR_IMPORT: Dict[str, ModuleInfo] = {'Pauli': {'PauliList', 'Clifford'}}
 
+# API docstrings may be dynamically generated, e.g., quantum_info/operators/mixins/*.py, also see __init__.py
+IGNORED_MODULES = {'qiskit.quantum_info.operators.mixins'}
+
 
 def make_class2modules(module_root: str, suffix: str = None, enable_special_treatment: bool = False) -> Dict[str, ModuleInfo]:
     def name_dist(a: str, b: str):
@@ -802,11 +805,12 @@ class SignatureReplacer:
 
 
 def retrieve_directory_path(module_name: str, qiskit_root: str) -> str:
+    dir_name = module_name.replace('.', os.sep)
     for file_path in glob.glob(os.path.join(qiskit_root, '**/'), recursive=True):
         if os.path.isdir(file_path):
             if file_path[-1] == os.sep:
                 file_path = file_path[:-1]
-            if file_path.split(os.sep)[-1] == module_name:
+            if file_path.endswith(dir_name):
                 return file_path
 
     return None
@@ -845,6 +849,13 @@ def autohints(
             raise ModuleNotFoundError(f"'{dname}' is not found")
         retrieved_only_dirname.append(path)
 
+    retrieved_ignored_dirname = []
+    for dname in IGNORED_MODULES:
+        path = retrieve_directory_path(dname, qiskit_root)
+        if path is None:
+            raise ModuleNotFoundError(f"'{dname}' is not found")
+        retrieved_ignored_dirname.append(path)
+
     sys.path.append(qiskit_root)
     sys.path.append(module_root)
 
@@ -858,6 +869,8 @@ def autohints(
         if only_filename and os.path.basename(file_path) not in only_filename:
             continue
         if retrieved_only_dirname and not path_contains_any(os.path.dirname(file_path), retrieved_only_dirname):
+            continue
+        if retrieved_ignored_dirname and path_contains_any(os.path.dirname(file_path), retrieved_ignored_dirname):
             continue
 
         # try:
