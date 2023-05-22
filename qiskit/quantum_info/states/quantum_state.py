@@ -143,7 +143,7 @@ class QuantumState:
         """
         pass
 
-    def _add(self, other: T) -> T:
+    def _add(self: T, other: T) -> T:
         """Return the linear combination self + other.
 
         Args:
@@ -486,26 +486,26 @@ class QuantumState:
         return new_probs
 
     # Overloads
-    def __and__(self, other):
+    def __and__(self: T, other: Operator | QuantumChannel) -> T:
         return self.evolve(other)
 
-    def __xor__(self, other):
+    def __xor__(self: T, other: T) -> T:
         return self.tensor(other)
 
-    def __mul__(self, other):
+    def __mul__(self: T, other: complex) -> T:
         return self._multiply(other)
 
     def __truediv__(self: T, other: complex) -> T:
         return self._multiply(1 / other)
 
-    def __rmul__(self, other):
+    def __rmul__(self: T, other: complex) -> T:
         return self.__mul__(other)
 
-    def __add__(self, other: T) -> T:
+    def __add__(self: T, other: T) -> T:
         return self._add(other)
 
-    def __sub__(self, other):
+    def __sub__(self: T, other: T) -> T:
         return self._add(-other)
 
-    def __neg__(self):
+    def __neg__(self: T) -> T:
         return self._multiply(-1)
