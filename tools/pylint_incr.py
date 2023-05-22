@@ -53,7 +53,6 @@ def _run_pylint(ref, paths, pylint_args):
             "diff-index",
             "--name-only",
             "--diff-filter=d",
-            "--merge-base",
             "-z",
             ref,
             "--",
