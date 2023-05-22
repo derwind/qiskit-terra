@@ -45,7 +45,7 @@ style:
 	black --check qiskit test tools examples setup.py
 
 black:
-	black qiskit test tools examples setup.py
+	black qiskit/quantum_info
 
 # Use the -s (starting directory) flag for "unittest discover" is necessary,
 # otherwise the QuantumCircuit header will be modified during the discovery.
