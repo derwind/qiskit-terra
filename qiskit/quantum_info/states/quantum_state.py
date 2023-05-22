@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import copy
 from abc import abstractmethod
-from typing import TypeVar
+from typing import Self
 
 import numpy as np
 
@@ -27,8 +27,6 @@ from qiskit.quantum_info.operators.channel.quantum_channel import QuantumChannel
 from qiskit.quantum_info.operators.op_shape import OpShape
 from qiskit.quantum_info.operators.operator import Operator
 from qiskit.result.counts import Counts
-
-T = TypeVar("T", bound="QuantumState")
 
 
 class QuantumState:
@@ -143,7 +141,7 @@ class QuantumState:
         """
         pass
 
-    def _add(self: T, other: T) -> T:
+    def _add(self, other: Self) -> Self:
         """Return the linear combination self + other.
 
         Args:
@@ -157,7 +155,7 @@ class QuantumState:
         """
         raise NotImplementedError(f"{type(self)} does not support addition")
 
-    def _multiply(self: T, other: complex) -> T:
+    def _multiply(self, other: complex) -> Self:
         """Return the scalar multipled state other * self.
 
         Args:
@@ -486,26 +484,26 @@ class QuantumState:
         return new_probs
 
     # Overloads
-    def __and__(self: T, other: Operator | QuantumChannel) -> T:
+    def __and__(self, other: Operator | QuantumChannel) -> Self:
         return self.evolve(other)
 
-    def __xor__(self: T, other: T) -> T:
+    def __xor__(self, other: Self) -> Self:
         return self.tensor(other)
 
-    def __mul__(self: T, other: complex) -> T:
+    def __mul__(self, other: complex) -> Self:
         return self._multiply(other)
 
-    def __truediv__(self: T, other: complex) -> T:
+    def __truediv__(self, other: complex) -> Self:
         return self._multiply(1 / other)
 
-    def __rmul__(self: T, other: complex) -> T:
+    def __rmul__(self, other: complex) -> Self:
         return self.__mul__(other)
 
-    def __add__(self: T, other: T) -> T:
+    def __add__(self, other: Self) -> Self:
         return self._add(other)
 
-    def __sub__(self: T, other: T) -> T:
+    def __sub__(self, other: Self) -> Self:
         return self._add(-other)
 
-    def __neg__(self: T) -> T:
+    def __neg__(self) -> Self:
         return self._multiply(-1)
