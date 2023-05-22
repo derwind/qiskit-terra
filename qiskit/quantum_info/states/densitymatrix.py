@@ -42,7 +42,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
 
     def __init__(
         self,
-        data: np.ndarray | list | QuantumCircuit | Instruction,
+        data: np.ndarray | list | QuantumCircuit | Instruction | QuantumState,
         dims: int | tuple | list | None = None,
     ):
         """Initialize a density matrix object.

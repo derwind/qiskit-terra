@@ -15,16 +15,20 @@ Abstract QuantumState class.
 """
 
 from __future__ import annotations
+
 import copy
 from abc import abstractmethod
+from typing import TypeVar
 
 import numpy as np
 
+from qiskit.quantum_info.operators.base_operator import BaseOperator
+from qiskit.quantum_info.operators.channel.quantum_channel import QuantumChannel
+from qiskit.quantum_info.operators.op_shape import OpShape
 from qiskit.quantum_info.operators.operator import Operator
 from qiskit.result.counts import Counts
-from qiskit.quantum_info.operators.op_shape import OpShape
-from qiskit.quantum_info.operators.channel.quantum_channel import QuantumChannel
-from qiskit.quantum_info.operators.base_operator import BaseOperator
+
+T = TypeVar("T", bound="QuantumState")
 
 
 class QuantumState:
@@ -139,7 +143,7 @@ class QuantumState:
         """
         pass
 
-    def _add(self, other: QuantumState) -> QuantumState:
+    def _add(self, other: T) -> T:
         """Return the linear combination self + other.
 
         Args:
@@ -153,7 +157,7 @@ class QuantumState:
         """
         raise NotImplementedError(f"{type(self)} does not support addition")
 
-    def _multiply(self, other: complex) -> QuantumState:
+    def _multiply(self: T, other: complex) -> T:
         """Return the scalar multipled state other * self.
 
         Args:
@@ -491,13 +495,13 @@ class QuantumState:
     def __mul__(self, other):
         return self._multiply(other)
 
-    def __truediv__(self, other):
+    def __truediv__(self: T, other: complex) -> T:
         return self._multiply(1 / other)
 
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    def __add__(self, other):
+    def __add__(self, other: T) -> T:
         return self._add(other)
 
     def __sub__(self, other):
