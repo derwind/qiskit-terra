@@ -32,11 +32,11 @@ from qiskit.result.counts import Counts
 class QuantumState:
     """Abstract quantum state base class"""
 
-    def __init__(self, op_shape: OpShape | None = None):
+    def __init__(self, op_shape: OpShape):
         """Initialize a QuantumState object.
 
         Args:
-            op_shape (OpShape): Optional, an OpShape object for state dimensions.
+            op_shape (OpShape): an OpShape object for state dimensions.
 
         .. note::
 
