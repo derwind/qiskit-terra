@@ -58,7 +58,7 @@ class Operator(LinearOp):
 
     def __init__(
         self,
-        data: QuantumCircuit | Operation | BaseOperator | np.matrix,
+        data: QuantumCircuit | Operation | BaseOperator | np.ndarray,
         input_dims: tuple | None = None,
         output_dims: tuple | None = None,
     ):
