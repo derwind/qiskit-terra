@@ -232,7 +232,7 @@ class Statevector(QuantumState, TolerancesMixin):
         """Return data."""
         return self._data
 
-    def is_valid(self, atol=None, rtol=None):
+    def is_valid(self, atol: float | None = None, rtol: float | None = None):
         """Return True if a Statevector has norm 1."""
         if atol is None:
             atol = self.atol
@@ -361,7 +361,7 @@ class Statevector(QuantumState, TolerancesMixin):
         return ret
 
     def evolve(
-        self, other: Operator | QuantumCircuit | Instruction, qargs: list | None = None
+        self, other: Operator | QuantumCircuit | Instruction, qargs: list[int] | None = None
     ) -> Statevector:
         """Evolve a quantum state by the operator.
 
@@ -456,7 +456,7 @@ class Statevector(QuantumState, TolerancesMixin):
         ret._op_shape = self._op_shape.reverse()
         return ret
 
-    def _expectation_value_pauli(self, pauli: Pauli, qargs: None | list = None) -> complex:
+    def _expectation_value_pauli(self, pauli: Pauli, qargs: None | list[int] = None) -> complex:
         """Compute the expectation value of a Pauli.
 
         Args:
@@ -489,7 +489,7 @@ class Statevector(QuantumState, TolerancesMixin):
             self.data, self.num_qubits, z_mask, x_mask, y_phase, x_max
         )
 
-    def expectation_value(self, oper: Operator, qargs: None | list = None) -> complex:
+    def expectation_value(self, oper: Operator, qargs: None | list[int] = None) -> complex:
         """Compute the expectation value of an operator.
 
         Args:
@@ -512,7 +512,7 @@ class Statevector(QuantumState, TolerancesMixin):
         conj = self.conjugate()
         return np.dot(conj.data, val.data)
 
-    def probabilities(self, qargs: None | list = None, decimals: None | int = None) -> np.ndarray:
+    def probabilities(self, qargs: None | list[int] = None, decimals: None | int = None) -> np.ndarray:
         """Return the subsystem measurement probability vector.
 
         Measurement probabilities are with respect to measurement in the
@@ -592,7 +592,7 @@ class Statevector(QuantumState, TolerancesMixin):
 
         return probs
 
-    def reset(self, qargs: list | None = None) -> Statevector:
+    def reset(self, qargs: list[int] | None = None) -> Statevector:
         """Reset state or subsystems to the 0-state.
 
         Args:
@@ -837,7 +837,7 @@ class Statevector(QuantumState, TolerancesMixin):
         )
 
     @staticmethod
-    def _evolve_operator(statevec, oper, qargs=None):
+    def _evolve_operator(statevec, oper, qargs: list[int] | None = None):
         """Evolve a qudit statevector"""
         new_shape = statevec._op_shape.compose(oper._op_shape, qargs=qargs)
         if qargs is None:
@@ -877,7 +877,7 @@ class Statevector(QuantumState, TolerancesMixin):
         return statevec
 
     @staticmethod
-    def _evolve_instruction(statevec, obj, qargs=None):
+    def _evolve_instruction(statevec, obj, qargs: list[int] | None = None):
         """Update the current Statevector by applying an instruction."""
         from qiskit.circuit.reset import Reset
         from qiskit.circuit.barrier import Barrier
