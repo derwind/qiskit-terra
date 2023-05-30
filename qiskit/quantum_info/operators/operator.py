@@ -370,7 +370,7 @@ class Operator(LinearOp):
             rtol = self.rtol
         return is_unitary_matrix(self._data, rtol=rtol, atol=atol)
 
-    def to_operator(self):
+    def to_operator(self) -> Operator:
         """Convert operator to matrix operator class"""
         return self
 

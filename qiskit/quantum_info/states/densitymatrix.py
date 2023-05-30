@@ -206,7 +206,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
         # Check positive semidefinite
         return is_positive_semidefinite_matrix(self.data, rtol=rtol, atol=atol)
 
-    def to_operator(self):
+    def to_operator(self) -> Operator:
         """Convert to Operator"""
         dims = self.dims()
         return Operator(self.data, input_dims=dims, output_dims=dims)

@@ -920,7 +920,7 @@ class SparsePauliOp(LinearOp):
                 mat += i
         return mat
 
-    def to_operator(self):
+    def to_operator(self) -> Operator:
         """Convert to a matrix Operator object"""
         return Operator(self.to_matrix())
 
