@@ -18,6 +18,8 @@ Transformations between QuantumChannel representations.
 """
 
 from __future__ import annotations
+from typing import Literal, overload
+
 import numpy as np
 
 from qiskit.exceptions import QiskitError
@@ -25,7 +27,7 @@ from qiskit.quantum_info.operators.predicates import is_hermitian_matrix
 from qiskit.quantum_info.operators.predicates import ATOL_DEFAULT
 
 
-def _transform_rep(input_rep: str, output_rep: str, data, input_dim, output_dim):
+def _transform_rep(input_rep: str, output_rep: str, data, input_dim: int, output_dim: int):
     """Transform a QuantumChannel between representation."""
     if input_rep == output_rep:
         return data
@@ -46,7 +48,7 @@ def _transform_rep(input_rep: str, output_rep: str, data, input_dim, output_dim)
     raise QiskitError(f"Invalid QuantumChannel {output_rep}")
 
 
-def _to_choi(rep: str, data, input_dim, output_dim):
+def _to_choi(rep: str, data, input_dim: int, output_dim: int):
     """Transform a QuantumChannel to the Choi representation."""
     if rep == "Choi":
         return data
@@ -66,7 +68,7 @@ def _to_choi(rep: str, data, input_dim, output_dim):
     raise QiskitError(f"Invalid QuantumChannel {rep}")
 
 
-def _to_superop(rep: str, data, input_dim, output_dim):
+def _to_superop(rep: str, data, input_dim: int, output_dim: int) -> np.ndarray:
     """Transform a QuantumChannel to the SuperOp representation."""
     if rep == "SuperOp":
         return data
@@ -86,7 +88,7 @@ def _to_superop(rep: str, data, input_dim, output_dim):
     raise QiskitError(f"Invalid QuantumChannel {rep}")
 
 
-def _to_kraus(rep: str, data, input_dim, output_dim):
+def _to_kraus(rep: str, data, input_dim: int, output_dim: int):
     """Transform a QuantumChannel to the Kraus representation."""
     if rep == "Kraus":
         return data
@@ -100,7 +102,7 @@ def _to_kraus(rep: str, data, input_dim, output_dim):
     return _choi_to_kraus(data, input_dim, output_dim)
 
 
-def _to_chi(rep: str, data, input_dim, output_dim):
+def _to_chi(rep: str, data, input_dim: int, output_dim: int):
     """Transform a QuantumChannel to the Chi representation."""
     if rep == "Chi":
         return data
@@ -114,7 +116,7 @@ def _to_chi(rep: str, data, input_dim, output_dim):
     return _choi_to_chi(data, input_dim)
 
 
-def _to_ptm(rep: str, data, input_dim, output_dim):
+def _to_ptm(rep: str, data: np.ndarray, input_dim: int, output_dim: int) -> np.ndarray:
     """Transform a QuantumChannel to the PTM representation."""
     if rep == "PTM":
         return data
@@ -128,7 +130,7 @@ def _to_ptm(rep: str, data, input_dim, output_dim):
     return _superop_to_ptm(data, input_dim)
 
 
-def _to_stinespring(rep: str, data, input_dim, output_dim):
+def _to_stinespring(rep: str, data, input_dim: int, output_dim: int):
     """Transform a QuantumChannel to the Stinespring representation."""
     if rep == "Stinespring":
         return data
@@ -140,7 +142,7 @@ def _to_stinespring(rep: str, data, input_dim, output_dim):
     return _kraus_to_stinespring(data, input_dim, output_dim)
 
 
-def _to_operator(rep: str, data, input_dim, output_dim):
+def _to_operator(rep: str, data, input_dim: int, output_dim: int):
     """Transform a QuantumChannel to the Operator representation."""
     if rep == "Operator":
         return data
@@ -152,7 +154,31 @@ def _to_operator(rep: str, data, input_dim, output_dim):
     return _kraus_to_operator(data)
 
 
-def _from_operator(rep: str, data, input_dim, output_dim):
+@overload
+def _from_operator(
+    rep: Literal["Operator", "SuperOp", "Choi", "Chi", "PTM"],
+    data: np.ndarray,
+    input_dim: int,
+    output_dim: int,
+) -> np.ndarray:
+    ...
+
+
+@overload
+def _from_operator(
+    rep: Literal["Kraus"], data: np.ndarray, input_dim: int, output_dim: int
+) -> tuple[list[np.ndarray], None]:
+    ...
+
+
+@overload
+def _from_operator(
+    rep: Literal["Stinespring"], data: np.ndarray, input_dim: int, output_dim: int
+) -> tuple[np.ndarray, None]:
+    ...
+
+
+def _from_operator(rep: str, data: np.ndarray, input_dim: int, output_dim: int):
     """Transform Operator representation to other representation."""
     if rep == "Operator":
         return data
@@ -183,7 +209,7 @@ def _kraus_to_operator(data):
     return data[0][0]
 
 
-def _stinespring_to_operator(data, output_dim):
+def _stinespring_to_operator(data, output_dim: int):
     """Transform Stinespring representation to Operator representation."""
     trace_dim = data[0].shape[0] // output_dim
     if data[1] is not None or trace_dim != 1:
@@ -191,13 +217,13 @@ def _stinespring_to_operator(data, output_dim):
     return data[0]
 
 
-def _superop_to_choi(data, input_dim, output_dim):
+def _superop_to_choi(data: np.ndarray, input_dim: int, output_dim: int) -> np.ndarray:
     """Transform SuperOp representation to Choi representation."""
     shape = (output_dim, output_dim, input_dim, input_dim)
     return _reshuffle(data, shape)
 
 
-def _choi_to_superop(data, input_dim, output_dim):
+def _choi_to_superop(data: np.ndarray, input_dim: int, output_dim: int) -> np.ndarray:
     """Transform Choi to SuperOp representation."""
     shape = (input_dim, output_dim, input_dim, output_dim)
     return _reshuffle(data, shape)
@@ -207,7 +233,7 @@ def _kraus_to_choi(
     data: tuple[list[np.ndarray], None] | tuple[list[np.ndarray], list[np.ndarray]]
 ) -> np.ndarray:
     """Transform Kraus representation to Choi representation."""
-    choi = 0
+    choi = np.array(0)
     kraus_l, kraus_r = data
     if kraus_r is None:
         for i in kraus_l:
@@ -220,7 +246,7 @@ def _kraus_to_choi(
 
 
 def _choi_to_kraus(
-    data, input_dim, output_dim, atol=ATOL_DEFAULT
+    data, input_dim: int, output_dim: int, atol=ATOL_DEFAULT
 ) -> tuple[list[np.ndarray], None] | tuple[list[np.ndarray], list[np.ndarray]]:
     """Transform Choi representation to Kraus representation."""
     from scipy import linalg as la
@@ -257,7 +283,7 @@ def _choi_to_kraus(
     return kraus_l, kraus_r
 
 
-def _stinespring_to_kraus(data, output_dim) -> tuple[list[np.ndarray] | None]:
+def _stinespring_to_kraus(data, output_dim: int) -> tuple[list[np.ndarray] | None]:
     """Transform Stinespring representation to Kraus representation."""
     kraus_pair = []
     for stine in data:
@@ -275,7 +301,7 @@ def _stinespring_to_kraus(data, output_dim) -> tuple[list[np.ndarray] | None]:
     return tuple(kraus_pair)
 
 
-def _stinespring_to_choi(data, input_dim, output_dim):
+def _stinespring_to_choi(data, input_dim: int, output_dim: int) -> np.ndarray:
     """Transform Stinespring representation to Choi representation."""
     trace_dim = data[0].shape[0] // output_dim
     stine_l = np.reshape(data[0], (output_dim, trace_dim, input_dim))
@@ -288,7 +314,7 @@ def _stinespring_to_choi(data, input_dim, output_dim):
     )
 
 
-def _stinespring_to_superop(data, input_dim, output_dim):
+def _stinespring_to_superop(data, input_dim: int, output_dim: int) -> np.ndarray:
     """Transform Stinespring representation to SuperOp representation."""
     trace_dim = data[0].shape[0] // output_dim
     stine_l = np.reshape(data[0], (output_dim, trace_dim, input_dim))
@@ -302,7 +328,7 @@ def _stinespring_to_superop(data, input_dim, output_dim):
     )
 
 
-def _kraus_to_stinespring(data, input_dim, output_dim):
+def _kraus_to_stinespring(data, input_dim: int, output_dim: int) -> tuple:
     """Transform Kraus representation to Stinespring representation."""
     stine_pair = [None, None]
     for i, kraus in enumerate(data):
@@ -317,10 +343,12 @@ def _kraus_to_stinespring(data, input_dim, output_dim):
     return tuple(stine_pair)
 
 
-def _kraus_to_superop(data):
+def _kraus_to_superop(
+    data: tuple[list[np.ndarray], None] | tuple[list[np.ndarray], list[np.ndarray]]
+) -> np.ndarray:
     """Transform Kraus representation to SuperOp representation."""
     kraus_l, kraus_r = data
-    superop = 0
+    superop = np.array(0)
     if kraus_r is None:
         for i in kraus_l:
             superop += np.kron(np.conj(i), i)
@@ -330,25 +358,25 @@ def _kraus_to_superop(data):
     return superop
 
 
-def _chi_to_choi(data, input_dim):
+def _chi_to_choi(data, input_dim: int):
     """Transform Chi representation to a Choi representation."""
     num_qubits = int(np.log2(input_dim))
     return _transform_from_pauli(data, num_qubits)
 
 
-def _choi_to_chi(data, input_dim):
+def _choi_to_chi(data, input_dim: int):
     """Transform Choi representation to the Chi representation."""
     num_qubits = int(np.log2(input_dim))
     return _transform_to_pauli(data, num_qubits)
 
 
-def _ptm_to_superop(data, input_dim):
+def _ptm_to_superop(data, input_dim: int):
     """Transform PTM representation to SuperOp representation."""
     num_qubits = int(np.log2(input_dim))
     return _transform_from_pauli(data, num_qubits)
 
 
-def _superop_to_ptm(data, input_dim):
+def _superop_to_ptm(data: np.ndarray, input_dim: int) -> np.ndarray:
     """Transform SuperOp representation to PTM representation."""
     num_qubits = int(np.log2(input_dim))
     return _transform_to_pauli(data, num_qubits)
@@ -410,7 +438,7 @@ def _reravel(mat1, mat2, shape1, shape2):
     return data
 
 
-def _transform_to_pauli(data, num_qubits):
+def _transform_to_pauli(data: np.ndarray, num_qubits: int) -> np.ndarray:
     """Change of basis of bipartite matrix representation."""
     # Change basis: um_{i=0}^3 |i>><\sigma_i|
     basis_mat = np.array(
@@ -431,7 +459,7 @@ def _transform_to_pauli(data, num_qubits):
     return np.dot(np.dot(cob, data), cob.conj().T) / 2**num_qubits
 
 
-def _transform_from_pauli(data, num_qubits):
+def _transform_from_pauli(data, num_qubits: int):
     """Change of basis of bipartite matrix representation."""
     # Change basis: sum_{i=0}^3 =|\sigma_i>><i|
     basis_mat = np.array(
@@ -452,7 +480,7 @@ def _transform_from_pauli(data, num_qubits):
     return np.dot(np.dot(cob, data), cob.conj().T) / 2**num_qubits
 
 
-def _reshuffle(mat, shape):
+def _reshuffle(mat, shape) -> np.ndarray:
     """Reshuffle the indices of a bipartite matrix A[ij,kl] -> A[lj,ki]."""
     return np.reshape(
         np.transpose(np.reshape(mat, shape), (3, 1, 2, 0)),
@@ -460,7 +488,7 @@ def _reshuffle(mat, shape):
     )
 
 
-def _check_nqubit_dim(input_dim, output_dim):
+def _check_nqubit_dim(input_dim: int, output_dim: int):
     """Return true if dims correspond to an n-qubit channel."""
     if input_dim != output_dim:
         raise QiskitError(
