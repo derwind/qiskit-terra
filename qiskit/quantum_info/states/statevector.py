@@ -512,7 +512,9 @@ class Statevector(QuantumState, TolerancesMixin):
         conj = self.conjugate()
         return np.dot(conj.data, val.data)
 
-    def probabilities(self, qargs: None | list[int] = None, decimals: None | int = None) -> np.ndarray:
+    def probabilities(
+        self, qargs: None | list[int] = None, decimals: None | int = None
+    ) -> np.ndarray:
         """Return the subsystem measurement probability vector.
 
         Measurement probabilities are with respect to measurement in the
