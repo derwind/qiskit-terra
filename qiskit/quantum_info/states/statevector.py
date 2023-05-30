@@ -17,7 +17,6 @@ from __future__ import annotations
 import copy
 import re
 from numbers import Number
-from typing import Dict
 
 import numpy as np
 
@@ -125,7 +124,7 @@ class Statevector(QuantumState, TolerancesMixin):
         )
 
     @property
-    def settings(self) -> Dict:
+    def settings(self) -> dict:
         """Return settings."""
         return {"data": self._data, "dims": self._op_shape.dims_l()}
 
