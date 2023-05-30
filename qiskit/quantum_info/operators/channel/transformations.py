@@ -283,9 +283,9 @@ def _choi_to_kraus(
     return kraus_l, kraus_r
 
 
-def _stinespring_to_kraus(data, output_dim: int) -> tuple[list[np.ndarray] | None]:
+def _stinespring_to_kraus(data, output_dim: int) -> tuple[list[np.ndarray], ...]:
     """Transform Stinespring representation to Kraus representation."""
-    kraus_pair = []
+    kraus_pair: list[list[np.ndarray] | None] = []
     for stine in data:
         if stine is None:
             kraus_pair.append(None)
@@ -328,9 +328,9 @@ def _stinespring_to_superop(data, input_dim: int, output_dim: int) -> np.ndarray
     )
 
 
-def _kraus_to_stinespring(data, input_dim: int, output_dim: int) -> tuple:
+def _kraus_to_stinespring(data, input_dim: int, output_dim: int) -> tuple[np.ndarray, ...]:
     """Transform Kraus representation to Stinespring representation."""
-    stine_pair = [None, None]
+    stine_pair: list[np.ndarray | None] = [None, None]
     for i, kraus in enumerate(data):
         if kraus is not None:
             num_kraus = len(kraus)
