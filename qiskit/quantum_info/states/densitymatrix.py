@@ -307,7 +307,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
         self,
         other: Operator | QuantumChannel | Instruction | QuantumCircuit,
         qargs: list | None = None,
-    ) -> QuantumState:
+    ) -> DensityMatrix:
         """Evolve a quantum state by an operator.
 
         Args:
@@ -317,7 +317,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
                            the operator on.
 
         Returns:
-            QuantumState: the output quantum state.
+            DensityMatrix: the output density matrix.
 
         Raises:
             QiskitError: if the operator dimension does not match the
@@ -531,7 +531,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
         return self.evolve(reset_superop, qargs=qargs)
 
     @classmethod
-    def from_label(cls, label: str) -> Statevector:
+    def from_label(cls, label: str) -> DensityMatrix:
         r"""Return a tensor product of Pauli X,Y,Z eigenstates.
 
         .. list-table:: Single-qubit state labels
@@ -557,7 +557,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
                             allowed values).
 
         Returns:
-            Statevector: The N-qubit basis state density matrix.
+            DensityMatrix: The N-qubit basis state density matrix.
 
         Raises:
             QiskitError: if the label contains invalid characters, or the length
@@ -703,7 +703,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
             self.data, self._op_shape.dims_l(), decimals=decimals, string_labels=True
         )
 
-    def _evolve_operator(self, other, qargs=None):
+    def _evolve_operator(self, other, qargs=None) -> DensityMatrix:
         """Evolve density matrix by an operator"""
         # Get shape of output density matrix
         new_shape = self._op_shape.compose(other._op_shape, qargs=qargs)
@@ -783,7 +783,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
                 new_qargs = [qargs[qubit_indices[tup]] for tup in instruction.qubits]
             self._append_instruction(instruction.operation, qargs=new_qargs)
 
-    def _evolve_instruction(self, obj, qargs=None):
+    def _evolve_instruction(self, obj, qargs=None) -> DensityMatrix:
         """Return a new statevector by applying an instruction."""
         if isinstance(obj, QuantumCircuit):
             obj = obj.to_instruction()
