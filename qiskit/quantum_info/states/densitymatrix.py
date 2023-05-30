@@ -306,7 +306,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
     def evolve(
         self,
         other: Operator | QuantumChannel | Instruction | QuantumCircuit,
-        qargs: list | None = None,
+        qargs: list[int] | None = None,
     ) -> DensityMatrix:
         """Evolve a quantum state by an operator.
 
@@ -364,7 +364,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
         ret._op_shape = self._op_shape.reverse()
         return ret
 
-    def _expectation_value_pauli(self, pauli: Pauli, qargs: None | list = None) -> complex:
+    def _expectation_value_pauli(self, pauli: Pauli, qargs: None | list[int] = None) -> complex:
         """Compute the expectation value of a Pauli.
 
         Args:
@@ -396,7 +396,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
             data, self.num_qubits, z_mask, x_mask, y_phase, x_max
         )
 
-    def expectation_value(self, oper: Operator, qargs: None | list = None) -> complex:
+    def expectation_value(self, oper: Operator, qargs: None | list[int] = None) -> complex:
         """Compute the expectation value of an operator.
 
         Args:
@@ -419,7 +419,9 @@ class DensityMatrix(QuantumState, TolerancesMixin):
             oper = Operator(oper)
         return np.trace(Operator(self).dot(oper, qargs=qargs).data)
 
-    def probabilities(self, qargs: None | list = None, decimals: None | int = None) -> np.ndarray:
+    def probabilities(
+        self, qargs: None | list[int] = None, decimals: None | int = None
+    ) -> np.ndarray:
         """Return the subsystem measurement probability vector.
 
         Measurement probabilities are with respect to measurement in the
@@ -499,7 +501,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
 
         return probs
 
-    def reset(self, qargs: list | None = None) -> DensityMatrix:
+    def reset(self, qargs: list[int] | None = None) -> DensityMatrix:
         """Reset state or subsystems to the 0-state.
 
         Args:
@@ -735,7 +737,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
         ret._op_shape = new_shape
         return ret
 
-    def _append_instruction(self, other, qargs=None):
+    def _append_instruction(self, other, qargs: list[int] | None = None):
         """Update the current Statevector by applying an instruction."""
         from qiskit.circuit.reset import Reset
         from qiskit.circuit.barrier import Barrier
@@ -783,7 +785,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
                 new_qargs = [qargs[qubit_indices[tup]] for tup in instruction.qubits]
             self._append_instruction(instruction.operation, qargs=new_qargs)
 
-    def _evolve_instruction(self, obj, qargs=None) -> DensityMatrix:
+    def _evolve_instruction(self, obj, qargs: list[int] | None = None) -> DensityMatrix:
         """Return a new statevector by applying an instruction."""
         if isinstance(obj, QuantumCircuit):
             obj = obj.to_instruction()
@@ -823,7 +825,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
         psi = evecs[:, np.argmax(evals)]  # eigenvectors returned in columns.
         return Statevector(psi)
 
-    def partial_transpose(self, qargs: list) -> DensityMatrix:
+    def partial_transpose(self, qargs: list[int]) -> DensityMatrix:
         """Return partially transposed density matrix.
 
         Args:
