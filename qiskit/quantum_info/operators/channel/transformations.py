@@ -25,7 +25,7 @@ from qiskit.quantum_info.operators.predicates import is_hermitian_matrix
 from qiskit.quantum_info.operators.predicates import ATOL_DEFAULT
 
 
-def _transform_rep(input_rep, output_rep, data, input_dim, output_dim):
+def _transform_rep(input_rep: str, output_rep: str, data, input_dim, output_dim):
     """Transform a QuantumChannel between representation."""
     if input_rep == output_rep:
         return data
@@ -46,7 +46,7 @@ def _transform_rep(input_rep, output_rep, data, input_dim, output_dim):
     raise QiskitError(f"Invalid QuantumChannel {output_rep}")
 
 
-def _to_choi(rep, data, input_dim, output_dim):
+def _to_choi(rep: str, data, input_dim, output_dim):
     """Transform a QuantumChannel to the Choi representation."""
     if rep == "Choi":
         return data
@@ -66,7 +66,7 @@ def _to_choi(rep, data, input_dim, output_dim):
     raise QiskitError(f"Invalid QuantumChannel {rep}")
 
 
-def _to_superop(rep, data, input_dim, output_dim):
+def _to_superop(rep: str, data, input_dim, output_dim):
     """Transform a QuantumChannel to the SuperOp representation."""
     if rep == "SuperOp":
         return data
@@ -86,7 +86,7 @@ def _to_superop(rep, data, input_dim, output_dim):
     raise QiskitError(f"Invalid QuantumChannel {rep}")
 
 
-def _to_kraus(rep, data, input_dim, output_dim):
+def _to_kraus(rep: str, data, input_dim, output_dim):
     """Transform a QuantumChannel to the Kraus representation."""
     if rep == "Kraus":
         return data
@@ -100,7 +100,7 @@ def _to_kraus(rep, data, input_dim, output_dim):
     return _choi_to_kraus(data, input_dim, output_dim)
 
 
-def _to_chi(rep, data, input_dim, output_dim):
+def _to_chi(rep: str, data, input_dim, output_dim):
     """Transform a QuantumChannel to the Chi representation."""
     if rep == "Chi":
         return data
@@ -114,7 +114,7 @@ def _to_chi(rep, data, input_dim, output_dim):
     return _choi_to_chi(data, input_dim)
 
 
-def _to_ptm(rep, data, input_dim, output_dim):
+def _to_ptm(rep: str, data, input_dim, output_dim):
     """Transform a QuantumChannel to the PTM representation."""
     if rep == "PTM":
         return data
@@ -128,7 +128,7 @@ def _to_ptm(rep, data, input_dim, output_dim):
     return _superop_to_ptm(data, input_dim)
 
 
-def _to_stinespring(rep, data, input_dim, output_dim):
+def _to_stinespring(rep: str, data, input_dim, output_dim):
     """Transform a QuantumChannel to the Stinespring representation."""
     if rep == "Stinespring":
         return data
@@ -140,7 +140,7 @@ def _to_stinespring(rep, data, input_dim, output_dim):
     return _kraus_to_stinespring(data, input_dim, output_dim)
 
 
-def _to_operator(rep, data, input_dim, output_dim):
+def _to_operator(rep: str, data, input_dim, output_dim):
     """Transform a QuantumChannel to the Operator representation."""
     if rep == "Operator":
         return data
@@ -152,7 +152,7 @@ def _to_operator(rep, data, input_dim, output_dim):
     return _kraus_to_operator(data)
 
 
-def _from_operator(rep, data, input_dim, output_dim):
+def _from_operator(rep: str, data, input_dim, output_dim):
     """Transform Operator representation to other representation."""
     if rep == "Operator":
         return data
@@ -203,7 +203,9 @@ def _choi_to_superop(data, input_dim, output_dim):
     return _reshuffle(data, shape)
 
 
-def _kraus_to_choi(data):
+def _kraus_to_choi(
+    data: tuple[list[np.ndarray], None] | tuple[list[np.ndarray], list[np.ndarray]]
+) -> np.ndarray:
     """Transform Kraus representation to Choi representation."""
     choi = 0
     kraus_l, kraus_r = data
@@ -217,7 +219,9 @@ def _kraus_to_choi(data):
     return choi
 
 
-def _choi_to_kraus(data, input_dim, output_dim, atol=ATOL_DEFAULT):
+def _choi_to_kraus(
+    data, input_dim, output_dim, atol=ATOL_DEFAULT
+) -> tuple[list[np.ndarray], None] | tuple[list[np.ndarray], list[np.ndarray]]:
     """Transform Choi representation to Kraus representation."""
     from scipy import linalg as la
 
@@ -253,7 +257,7 @@ def _choi_to_kraus(data, input_dim, output_dim, atol=ATOL_DEFAULT):
     return kraus_l, kraus_r
 
 
-def _stinespring_to_kraus(data, output_dim):
+def _stinespring_to_kraus(data, output_dim) -> tuple[list[np.ndarray] | None]:
     """Transform Stinespring representation to Kraus representation."""
     kraus_pair = []
     for stine in data:
