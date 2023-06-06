@@ -232,7 +232,7 @@ class Statevector(QuantumState, TolerancesMixin):
         """Return data."""
         return self._data
 
-    def is_valid(self, atol: float | None = None, rtol: float | None = None):
+    def is_valid(self, atol: float | None = None, rtol: float | None = None) -> bool:
         """Return True if a Statevector has norm 1."""
         if atol is None:
             atol = self.atol
@@ -246,15 +246,15 @@ class Statevector(QuantumState, TolerancesMixin):
         mat = np.outer(self.data, np.conj(self.data))
         return Operator(mat, input_dims=self.dims(), output_dims=self.dims())
 
-    def conjugate(self):
+    def conjugate(self) -> Statevector:
         """Return the conjugate of the operator."""
         return Statevector(np.conj(self.data), dims=self.dims())
 
-    def trace(self):
+    def trace(self) -> np.float64:
         """Return the trace of the quantum state as a density matrix."""
         return np.sum(np.abs(self.data) ** 2)
 
-    def purity(self):
+    def purity(self) -> np.float64:
         """Return the purity of the quantum state."""
         # For a valid statevector the purity is always 1, however if we simply
         # have an arbitrary vector (not correctly normalized) then the
@@ -841,7 +841,7 @@ class Statevector(QuantumState, TolerancesMixin):
         )
 
     @staticmethod
-    def _evolve_operator(statevec, oper, qargs: list[int] | None = None):
+    def _evolve_operator(statevec, oper, qargs: list[int] | None = None) -> Statevector:
         """Evolve a qudit statevector"""
         new_shape = statevec._op_shape.compose(oper._op_shape, qargs=qargs)
         if qargs is None:
@@ -881,7 +881,7 @@ class Statevector(QuantumState, TolerancesMixin):
         return statevec
 
     @staticmethod
-    def _evolve_instruction(statevec, obj, qargs: list[int] | None = None):
+    def _evolve_instruction(statevec, obj, qargs: list[int] | None = None) -> Statevector:
         """Update the current Statevector by applying an instruction."""
         from qiskit.circuit.reset import Reset
         from qiskit.circuit.barrier import Barrier
