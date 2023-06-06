@@ -25,7 +25,7 @@ from qiskit.circuit.instruction import Instruction
 from qiskit.exceptions import QiskitError
 from qiskit.quantum_info.states.quantum_state import QuantumState
 from qiskit.quantum_info.operators.mixins.tolerances import TolerancesMixin
-from qiskit.quantum_info.operators.operator import Operator
+from qiskit.quantum_info.operators.operator import Operator, BaseOperator
 from qiskit.quantum_info.operators.symplectic import Pauli, SparsePauliOp
 from qiskit.quantum_info.operators.op_shape import OpShape
 from qiskit.quantum_info.operators.predicates import matrix_equal
@@ -489,7 +489,9 @@ class Statevector(QuantumState, TolerancesMixin):
             self.data, self.num_qubits, z_mask, x_mask, y_phase, x_max
         )
 
-    def expectation_value(self, oper: Operator, qargs: None | list[int] = None) -> complex:
+    def expectation_value(
+        self, oper: BaseOperator | QuantumCircuit | Instruction, qargs: None | list[int] = None
+    ) -> complex:
         """Compute the expectation value of an operator.
 
         Args:
