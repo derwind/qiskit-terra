@@ -15,6 +15,8 @@ Quantum information utility functions for states.
 """
 
 from __future__ import annotations
+from typing import Callable
+
 import numpy as np
 
 from qiskit.exceptions import QiskitError
@@ -23,7 +25,7 @@ from qiskit.quantum_info.states.densitymatrix import DensityMatrix
 from qiskit.quantum_info.operators.channel import SuperOp
 
 
-def partial_trace(state, qargs):
+def partial_trace(state: Statevector | DensityMatrix, qargs: list) -> DensityMatrix:
     """Return reduced density matrix by tracing out part of quantum state.
 
     If all subsystems are traced over this returns the
@@ -77,7 +79,7 @@ def partial_trace(state, qargs):
     return ret
 
 
-def shannon_entropy(pvec, base=2):
+def shannon_entropy(pvec: list | np.ndarray, base: int = 2) -> float:
     r"""Compute the Shannon entropy of a probability vector.
 
     The shannon entropy of a probability vector
@@ -119,7 +121,9 @@ def shannon_entropy(pvec, base=2):
     return h_val
 
 
-def _format_state(state, validate=True):
+def _format_state(
+    state: list | np.ndarray | Statevector | DensityMatrix, validate: bool = True
+) -> Statevector | DensityMatrix:
     """Format input state into class object"""
     if isinstance(state, list):
         state = np.array(state, dtype=complex)
@@ -140,7 +144,7 @@ def _format_state(state, validate=True):
     return state
 
 
-def _funm_svd(matrix, func):
+def _funm_svd(matrix: np.ndarray, func: Callable) -> np.ndarray:
     """Apply real scalar function to singular values of a matrix.
 
     Args:
