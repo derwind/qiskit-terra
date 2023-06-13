@@ -332,7 +332,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
 
         # Evolution by a QuantumChannel
         # Currently the class that has `to_quantumchannel` is QuantumError of Qiskit Aer, so we can't
-        # use QuantumError as a type hint. We would like to move QuantumError to Terra in the future.
+        # use QuantumError as a type hint.
         if hasattr(other, "to_quantumchannel"):
             return other.to_quantumchannel()._evolve(self, qargs=qargs)
         if isinstance(other, QuantumChannel):
