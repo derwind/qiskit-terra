@@ -24,7 +24,7 @@ from .statevector import Statevector
 from .densitymatrix import DensityMatrix
 
 
-def random_statevector(dims, seed=None):
+def random_statevector(dims: int | tuple, seed: int | np.random.Generator | None = None):
     """Generator a random Statevector.
 
     The statevector is sampled from the uniform (Haar) measure.
@@ -55,7 +55,12 @@ def random_statevector(dims, seed=None):
     return Statevector(np.sqrt(x / sumx) * np.exp(1j * phases), dims=dims)
 
 
-def random_density_matrix(dims, rank=None, method="Hilbert-Schmidt", seed=None):
+def random_density_matrix(
+    dims: int | tuple,
+    rank: int | None = None,
+    method: str = "Hilbert-Schmidt",
+    seed: int | np.random.Generator | None = None,
+):
     """Generator a random DensityMatrix.
 
     Args:
@@ -88,7 +93,7 @@ def random_density_matrix(dims, rank=None, method="Hilbert-Schmidt", seed=None):
     return DensityMatrix(rho, dims=dims)
 
 
-def _ginibre_matrix(nrow, ncol, seed):
+def _ginibre_matrix(nrow: int, ncol: int, seed: int | np.random.Generator):
     """Return a normally distributed complex random matrix.
 
     Args:
@@ -111,7 +116,7 @@ def _ginibre_matrix(nrow, ncol, seed):
     return ginibre
 
 
-def _random_density_hs(dim, rank, seed):
+def _random_density_hs(dim: int, rank: int | None, seed: int | np.random.Generator):
     """
     Generate a random density matrix from the Hilbert-Schmidt metric.
 
@@ -129,7 +134,7 @@ def _random_density_hs(dim, rank, seed):
     return mat / np.trace(mat)
 
 
-def _random_density_bures(dim, rank, seed):
+def _random_density_bures(dim: int, rank: int | None, seed: int | np.random.Generator):
     """Generate a random density matrix from the Bures metric.
 
     Args:
