@@ -16,6 +16,7 @@ Optimized list of Pauli operators
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import Iterable
 
 import numpy as np
 import rustworkx as rx
@@ -165,7 +166,7 @@ class PauliList(BasePauli, LinearMixin, GroupMixin):
         return ret
 
     @staticmethod
-    def _from_paulis(data):
+    def _from_paulis(data: list | tuple | set | np.ndarray | Iterable) -> PauliList:
         """Construct a PauliList from a list of Pauli data.
 
         Args:
@@ -212,7 +213,7 @@ class PauliList(BasePauli, LinearMixin, GroupMixin):
         """Print representation."""
         return self._truncated_str(False)
 
-    def _truncated_str(self, show_class):
+    def _truncated_str(self, show_class: bool) -> str:
         stop = self._num_paulis
         if self.__truncate__ and self.num_qubits > 0:
             max_paulis = self.__truncate__ // self.num_qubits

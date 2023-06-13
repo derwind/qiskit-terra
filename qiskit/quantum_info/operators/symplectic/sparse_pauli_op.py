@@ -494,7 +494,7 @@ class SparsePauliOp(LinearOp):
             PauliList.from_symplectic(z, x), coeffs, ignore_pauli_phase=True, copy=False
         )
 
-    def argsort(self, weight=False):
+    def argsort(self, weight: bool = False):
         """Return indices for sorting the rows of the table.
 
         Returns the composition of permutations in the order of sorting
@@ -562,7 +562,7 @@ class SparsePauliOp(LinearOp):
         sort_pauli_inds = pauli_list.argsort(weight=weight, phase=False)
         return sort_coeffs_inds[sort_pauli_inds]
 
-    def sort(self, weight=False):
+    def sort(self, weight: bool = False):
         """Sort the rows of the table.
 
         After sorting the coefficients using numpy's argsort, sort by Pauli.
