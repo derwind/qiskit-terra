@@ -180,7 +180,7 @@ class XXDecomposer:
 
         return {"point": best_point, "cost": best_cost, "sequence": best_sequence}
 
-    def num_basis_gates(self, unitary):
+    def num_basis_gates(self, unitary: Operator | np.ndarray):
         """
         Counts the number of gates that would be emitted during re-synthesis.
 
@@ -198,7 +198,7 @@ class XXDecomposer:
         return len(best_sequence)
 
     @staticmethod
-    def _strength_to_infidelity(basis_fidelity, approximate=False):
+    def _strength_to_infidelity(basis_fidelity: float | dict, approximate: bool = False):
         """
         Converts a dictionary mapping XX strengths to fidelities to a dictionary mapping XX
         strengths to infidelities. Also supports one of the other formats Qiskit uses: if only a

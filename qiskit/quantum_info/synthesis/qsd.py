@@ -24,7 +24,13 @@ from qiskit.extensions.quantum_initializer.uc_pauli_rot import UCPauliRotGate, _
 
 
 def qs_decomposition(
-    mat, opt_a1=True, opt_a2=True, decomposer_1q=None, decomposer_2q=None, *, _depth=0
+    mat: np.ndarray,
+    opt_a1: bool = True,
+    opt_a2: bool = True,
+    decomposer_1q=None,
+    decomposer_2q=None,
+    *,
+    _depth=0,
 ):
     """
     Decomposes unitary matrix into one and two qubit gates using Quantum Shannon Decomposition.
@@ -124,7 +130,9 @@ def qs_decomposition(
     return circ
 
 
-def _demultiplex(um0, um1, opt_a1=False, opt_a2=False, *, _depth=0):
+def _demultiplex(
+    um0: np.ndarray, um1: np.ndarray, opt_a1: bool = False, opt_a2: bool = False, *, _depth: int = 0
+):
     """Decompose a generic multiplexer.
 
           ────□────
