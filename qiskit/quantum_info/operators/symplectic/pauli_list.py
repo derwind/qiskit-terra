@@ -16,7 +16,6 @@ Optimized list of Pauli operators
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Iterable
 
 import numpy as np
 import rustworkx as rx
@@ -166,7 +165,7 @@ class PauliList(BasePauli, LinearMixin, GroupMixin):
         return ret
 
     @staticmethod
-    def _from_paulis(data: list | tuple | set | np.ndarray | Iterable) -> PauliList:
+    def _from_paulis(data):
         """Construct a PauliList from a list of Pauli data.
 
         Args:
@@ -213,7 +212,7 @@ class PauliList(BasePauli, LinearMixin, GroupMixin):
         """Print representation."""
         return self._truncated_str(False)
 
-    def _truncated_str(self, show_class: bool) -> str:
+    def _truncated_str(self, show_class):
         stop = self._num_paulis
         if self.__truncate__ and self.num_qubits > 0:
             max_paulis = self.__truncate__ // self.num_qubits
@@ -1117,7 +1116,7 @@ class PauliList(BasePauli, LinearMixin, GroupMixin):
         base_z, base_x, base_phase = cls._from_array(z, x, phase)
         return cls(BasePauli(base_z, base_x, base_phase))
 
-    def _noncommutation_graph(self, qubit_wise: bool) -> list[tuple[int, int]]:
+    def _noncommutation_graph(self, qubit_wise):
         """Create an edge list representing the non-commutation graph (Pauli Graph).
 
         An edge (i, j) is present if i and j are not commutable.

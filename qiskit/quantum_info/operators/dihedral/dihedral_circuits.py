@@ -14,22 +14,16 @@ Circuit simulation for the CNOTDihedral class
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
 
 import numpy as np
 
 from qiskit.exceptions import QiskitError
-from qiskit.circuit import QuantumCircuit, Instruction
+from qiskit.circuit import QuantumCircuit
 from qiskit.circuit.barrier import Barrier
 from qiskit.circuit.delay import Delay
 
-if TYPE_CHECKING:
-    from .dihedral import CNOTDihedral
 
-
-def _append_circuit(
-    elem: CNOTDihedral, circuit: QuantumCircuit | Instruction, qargs: list | None = None
-):
+def _append_circuit(elem, circuit, qargs=None):
     """Update a CNOTDihedral element inplace by applying a CNOTDihedral circuit.
 
     Args:

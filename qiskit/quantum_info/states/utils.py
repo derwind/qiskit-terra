@@ -15,7 +15,6 @@ Quantum information utility functions for states.
 """
 
 from __future__ import annotations
-from typing import Callable
 
 import numpy as np
 
@@ -121,9 +120,7 @@ def shannon_entropy(pvec: list | np.ndarray, base: int = 2) -> float:
     return h_val
 
 
-def _format_state(
-    state: list | np.ndarray | Statevector | DensityMatrix, validate: bool = True
-) -> Statevector | DensityMatrix:
+def _format_state(state, validate=True):
     """Format input state into class object"""
     if isinstance(state, list):
         state = np.array(state, dtype=complex)
@@ -144,7 +141,7 @@ def _format_state(
     return state
 
 
-def _funm_svd(matrix: np.ndarray, func: Callable) -> np.ndarray:
+def _funm_svd(matrix, func):
     """Apply real scalar function to singular values of a matrix.
 
     Args:

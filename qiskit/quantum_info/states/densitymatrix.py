@@ -366,7 +366,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
         ret._op_shape = self._op_shape.reverse()
         return ret
 
-    def _expectation_value_pauli(self, pauli: Pauli, qargs: None | list[int] = None) -> complex:
+    def _expectation_value_pauli(self, pauli, qargs=None):
         """Compute the expectation value of a Pauli.
 
         Args:
@@ -707,7 +707,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
             self.data, self._op_shape.dims_l(), decimals=decimals, string_labels=True
         )
 
-    def _evolve_operator(self, other, qargs=None) -> DensityMatrix:
+    def _evolve_operator(self, other, qargs=None):
         """Evolve density matrix by an operator"""
         # Get shape of output density matrix
         new_shape = self._op_shape.compose(other._op_shape, qargs=qargs)
@@ -739,7 +739,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
         ret._op_shape = new_shape
         return ret
 
-    def _append_instruction(self, other, qargs: list[int] | None = None):
+    def _append_instruction(self, other, qargs=None):
         """Update the current Statevector by applying an instruction."""
         from qiskit.circuit.reset import Reset
         from qiskit.circuit.barrier import Barrier
@@ -787,7 +787,7 @@ class DensityMatrix(QuantumState, TolerancesMixin):
                 new_qargs = [qargs[qubit_indices[tup]] for tup in instruction.qubits]
             self._append_instruction(instruction.operation, qargs=new_qargs)
 
-    def _evolve_instruction(self, obj, qargs: list[int] | None = None) -> DensityMatrix:
+    def _evolve_instruction(self, obj, qargs=None):
         """Return a new statevector by applying an instruction."""
         if isinstance(obj, QuantumCircuit):
             obj = obj.to_instruction()

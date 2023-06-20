@@ -456,7 +456,7 @@ class Statevector(QuantumState, TolerancesMixin):
         ret._op_shape = self._op_shape.reverse()
         return ret
 
-    def _expectation_value_pauli(self, pauli: Pauli, qargs: None | list[int] = None) -> complex:
+    def _expectation_value_pauli(self, pauli, qargs=None):
         """Compute the expectation value of a Pauli.
 
         Args:
@@ -841,7 +841,7 @@ class Statevector(QuantumState, TolerancesMixin):
         )
 
     @staticmethod
-    def _evolve_operator(statevec, oper, qargs: list[int] | None = None) -> Statevector:
+    def _evolve_operator(statevec, oper, qargs=None):
         """Evolve a qudit statevector"""
         new_shape = statevec._op_shape.compose(oper._op_shape, qargs=qargs)
         if qargs is None:
@@ -881,7 +881,7 @@ class Statevector(QuantumState, TolerancesMixin):
         return statevec
 
     @staticmethod
-    def _evolve_instruction(statevec, obj, qargs: list[int] | None = None) -> Statevector:
+    def _evolve_instruction(statevec, obj, qargs=None):
         """Update the current Statevector by applying an instruction."""
         from qiskit.circuit.reset import Reset
         from qiskit.circuit.barrier import Barrier

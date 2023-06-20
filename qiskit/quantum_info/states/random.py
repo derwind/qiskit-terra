@@ -93,7 +93,7 @@ def random_density_matrix(
     return DensityMatrix(rho, dims=dims)
 
 
-def _ginibre_matrix(nrow: int, ncol: int, seed: int | np.random.Generator):
+def _ginibre_matrix(nrow, ncol, seed):
     """Return a normally distributed complex random matrix.
 
     Args:
@@ -116,7 +116,7 @@ def _ginibre_matrix(nrow: int, ncol: int, seed: int | np.random.Generator):
     return ginibre
 
 
-def _random_density_hs(dim: int, rank: int | None, seed: int | np.random.Generator):
+def _random_density_hs(dim, rank, seed):
     """
     Generate a random density matrix from the Hilbert-Schmidt metric.
 
@@ -134,7 +134,7 @@ def _random_density_hs(dim: int, rank: int | None, seed: int | np.random.Generat
     return mat / np.trace(mat)
 
 
-def _random_density_bures(dim: int, rank: int | None, seed: int | np.random.Generator):
+def _random_density_bures(dim, rank, seed):
     """Generate a random density matrix from the Bures metric.
 
     Args:

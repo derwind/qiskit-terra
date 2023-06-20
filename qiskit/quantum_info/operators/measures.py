@@ -349,7 +349,7 @@ def diamond_norm(choi: Choi | QuantumChannel, **kwargs) -> float:
     return sol
 
 
-def _cvxpy_check(name: str):
+def _cvxpy_check(name):
     """Check that a supported CVXPY version is installed"""
     # Check if CVXPY package is installed
     _optionals.HAS_CVXPY.require_now(name)

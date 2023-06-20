@@ -179,7 +179,7 @@ class QuantumChannel(LinearOp):
             other = type(self)(other)
         return self._add(-other, qargs=qargs)
 
-    def _add(self, other, qargs: None | list = None) -> Self:
+    def _add(self, other, qargs=None):
         # NOTE: this method must be overridden for subclasses
         # that don't have a linear matrix representation
         # ie Kraus and Stinespring
@@ -191,7 +191,7 @@ class QuantumChannel(LinearOp):
         ret._data = self._data + other._data
         return ret
 
-    def _multiply(self, other: Number):
+    def _multiply(self, other):
         # NOTE: this method must be overridden for subclasses
         # that don't have a linear matrix representation
         # ie Kraus and Stinespring
@@ -305,9 +305,7 @@ class QuantumChannel(LinearOp):
         return state
 
     @abstractmethod
-    def _evolve(
-        self, state: DensityMatrix | Statevector, qargs: list | None = None
-    ) -> DensityMatrix:
+    def _evolve(self, state, qargs=None):
         """Evolve a quantum state by the quantum channel.
 
         Args:

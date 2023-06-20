@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import copy
 from abc import abstractmethod
-from typing import Self
 
 import numpy as np
 
@@ -141,7 +140,7 @@ class QuantumState:
         """
         pass
 
-    def _add(self, other: Self) -> Self:
+    def _add(self, other):
         """Return the linear combination self + other.
 
         Args:
@@ -155,7 +154,7 @@ class QuantumState:
         """
         raise NotImplementedError(f"{type(self)} does not support addition")
 
-    def _multiply(self, other: complex) -> Self:
+    def _multiply(self, other):
         """Return the scalar multipled state other * self.
 
         Args:
@@ -484,26 +483,26 @@ class QuantumState:
         return new_probs
 
     # Overloads
-    def __and__(self, other: Operator | QuantumChannel) -> Self:
+    def __and__(self, other):
         return self.evolve(other)
 
-    def __xor__(self, other: Self) -> Self:
+    def __xor__(self, other):
         return self.tensor(other)
 
-    def __mul__(self, other: complex) -> Self:
+    def __mul__(self, other):
         return self._multiply(other)
 
-    def __truediv__(self, other: complex) -> Self:
+    def __truediv__(self, other):
         return self._multiply(1 / other)
 
-    def __rmul__(self, other: complex) -> Self:
+    def __rmul__(self, other):
         return self.__mul__(other)
 
-    def __add__(self, other: Self) -> Self:
+    def __add__(self, other):
         return self._add(other)
 
-    def __sub__(self, other: Self) -> Self:
+    def __sub__(self, other):
         return self._add(-other)
 
-    def __neg__(self) -> Self:
+    def __neg__(self):
         return self._multiply(-1)

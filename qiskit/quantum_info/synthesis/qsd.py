@@ -130,9 +130,7 @@ def qs_decomposition(
     return circ
 
 
-def _demultiplex(
-    um0: np.ndarray, um1: np.ndarray, opt_a1: bool = False, opt_a2: bool = False, *, _depth: int = 0
-):
+def _demultiplex(um0, um1, opt_a1=False, opt_a2=False, *, _depth=0):
     """Decompose a generic multiplexer.
 
           ────□────
